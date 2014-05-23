@@ -1,0 +1,433 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<Module>
+  <ModulePrefs title="Events"
+		description="A simple note taking widget developed during Dev8eD. No realtime synch involved yet."
+		author="Your Name"
+		author_email="Your Email"
+		height="300">
+  	<Require feature="opensocial-0.8" />
+    <Require feature="openapp" />
+    <OAuth>
+		<Service name="openapp" xmlns:openapp="http://www.role-project.eu/xml/openapp/opensocialext/" 
+			openapp:service="http://purl.org/role/terms/spaceService"
+			openapp:permitReadAppend="http://purl.org/role/terms/data">
+			<Request method="" url=""/>
+			<Authorization url=""/>
+			<Access method="" url=""/>
+		</Service>
+    </OAuth>
+  </ModulePrefs>
+  <Content type="html">
+    <![CDATA[
+		
+        <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>
+		<script src="http://dbis.rwth-aachen.de/gadgets/iwc/lib/iwc.js"></script>
+        <link href="css/bootstrap.css" rel="stylesheet">
+        
+		
+		<!-- JavaScript Block -->
+		<script>
+			
+            var space;
+            var user;
+            var iwcClient;
+            var parentTrigger="";
+            var parentMicro="";
+            var parentWidget="";
+            var editMode=new Boolean(0);
+			
+			gadgets.util.registerOnLoadHandler(init);
+			
+			function init(){
+				console.log("Widget loaded");
+				
+				space = new openapp.oo.Resource(openapp.param.space());
+				user = new openapp.oo.Resource(openapp.param.user());
+				
+				space.getInfo(function(info) {
+					var spacename = info[openapp.ns.dcterms + "title"];
+					
+				});
+				
+				user.getInfo(function(info) {
+					var username = info[openapp.ns.dcterms + "title"];
+					
+				});
+				
+				iwcClient = new iwc.Client()
+				iwcClient.connect(iwcCallback);
+				
+				renderNotes();
+			}
+			
+			function iwcCallback(intent){
+				console.log("Template: Received intent");
+				console.log(intent);
+				
+				if (intent.action == "ACTION_UPDATE" && 
+					intent.extras.ns == "my:ns:note"){
+					window.location.reload();
+				}
+				
+				if (intent.action == "ACTION_MESSAGE") {
+					//if(intent.sender.indexOf("@") > -1){
+             
+                if(intent.extras.microID==""&&intent.extras.parentTrigger==null)
+                    {
+             parentWidget=intent.extras.widgetID;
+             document.getElementById("parentTrigger").innerHTML="All";
+             document.getElementById("parentMicro").innerHTML="All";
+             document.getElementById("parentWidget").innerHTML=intent.extras.widgetID;
+             updateRender(parentWidget);
+             
+                    }
+             
+             else if(intent.extras.microID!=""&&intent.extras.parentTrigger==null)
+             {
+             
+             parentMicro=intent.extras.microID;
+             parentWidget=intent.extras.widgetID;
+             document.getElementById("parentTrigger").innerHTML="All";
+             document.getElementById("parentMicro").innerHTML=parentMicro;
+             document.getElementById("parentWidget").innerHTML=intent.extras.widgetID;
+             updateRender(parentMicro);
+             
+             }
+
+             
+             else if(intent.extras.microID!=""&&intent.extras.parentTrigger!=null)
+             {
+             parentTrigger=intent.extras.parentTrigger;
+             parentMicro=intent.extras.microID;
+             parentWidget=intent.extras.widgetID;
+             document.getElementById("parentTrigger").innerHTML=parentTrigger;
+             document.getElementById("parentMicro").innerHTML=parentMicro;
+             document.getElementById("parentWidget").innerHTML=intent.extras.widgetID;
+             updateRender(parentTrigger);
+             
+             }
+
+             
+					
+
+                  //  document.getElementById("parentTrigger").innerHTML=parentTrigger;
+                  //  document.getElementById("parentMicro").innerHTML=parentMicro;
+             
+					//}
+             
+				}
+			}
+			
+			function addEvent(){
+                var eventNote = {"text":document.getElementById("note").value,
+                                 "parentTrigger":parentTrigger,
+                                 "parentMicro":parentMicro,
+                                 "parentWidget":parentWidget,
+                                 "conditionClause":document.getElementById("conditionList").value,
+                                 "eventFunction":document.getElementById("functionList").value
+             };
+                
+                    space.create({
+                        relation: openapp.ns.role + "data",
+                        type: "my:ns:eventNote",
+                        representation: eventNote,
+                        callback: function(sub){
+                        publishResourceUpdate(sub.uri);
+                        window.location.reload();
+                            }
+                        });
+            }
+            
+            
+			
+			
+			function sendMessage(){
+				var note = document.getElementById("message").value;
+				publishMessage(document.getElementById("message").value,"1234") ;
+			}
+            
+             
+             function selectEvent(eventID,parentTrigger,parentMicro,parentWidget,eventFunction, conditionClause){
+             
+             //publishMessage(selectedMicroService,parentWidget);
+             
+             space.getSubResources({
+                                   
+                                   relation: openapp.ns.role + "data",
+                                   type: "my:ns:eventNote",
+                                   onEach: function(eventNote) {
+                                   eventNote.getRepresentation("rdfjson",function(r){
+                                                               
+                                                               var w = document.getElementById("triggerList");
+                                                               var option = document.createElement("option");
+                                                               if(r.text==eventID){
+                                                               option.selected="true";
+                                                               }
+                                                               
+                                                               option.text =r.parentWidget+":"+r.parentMicro+":"+r.parentTrigger;
+                                                               option.value=r.text;
+                                                               w.add(option);
+                                                               });
+                                   }
+                                   });
+             
+             
+             $('#conditionList').val(conditionClause);
+             
+             $('#note').val(eventID);
+             //$('#Grid/Table:last').removeClass("btn btn-default").addClass("btn btn-default active");
+             //$('#Form:last').removeClass("btn btn-default active").addClass("btn btn-default");
+             
+             
+             if(editMode==false)
+             {
+             $('#triggerList').toggle(400);
+             $('#addButton').toggle(400);
+             $('#updateButton').toggle(400);
+             $('#removeButton').toggle(400);
+             $('#closeEdit').toggle(400);
+             $('#eventModeAdd').toggle(400);
+             $('#eventModeEdit').toggle(400);
+             
+             editMode=true;
+             }
+             }
+             
+             $(document).ready(function(){
+             $("#closeEdit").click(function(){
+                 editMode=false;
+                 $('#addButton').toggle(400);
+                 $('#updateButton').toggle(400);
+                 $('#removeButton').toggle(400);
+                 $('#triggerList').toggle(400);
+                 $('#closeEdit').toggle(400);
+                 $('#note').val("");
+                 $('#eventModeAdd').toggle(400);
+                 $('#eventModeEdit').toggle(400);
+                                                     });
+                               });
+            
+            
+            function renderNotes(){
+            
+                space.getSubResources({
+                
+                    relation: openapp.ns.role + "data",
+                    type: "my:ns:eventNote",
+                    onEach: function(eventNote) {
+                    eventNote.getRepresentation("rdfjson",function(r){
+                    
+                    
+                    var event = $("<button></button>").text(r.text);
+                    event.addClass('btn btn-info btn-sm');
+                    event.attr('id', r.text);
+                    event.attr('title', r.eventFunction+r.parentWidget);
+                    event.on("click", function () {
+                    selectEvent(r.text,r.parentTrigger,r.parentMicro, r.parentWidget,r.eventFunction, r.conditionClause);
+                              });
+                    $("#eventList").append(event);
+                    
+                    
+                                });
+                            }
+                        });
+             
+             space.getSubResources({
+                                   
+                    relation: openapp.ns.role + "data",
+                    type: "my:ns:triggerNote",
+                    onEach: function(triggerNote) {
+                    triggerNote.getRepresentation("rdfjson",function(r){
+                    
+                                                  
+                    var w = document.getElementById("triggerList");
+                    var option = document.createElement("option");
+                    option.text = r.parentWidget+":"+r.parentMicro+":"+r.text;
+                    w.add(option);
+                                   });
+                                   }
+                                   });
+             
+             
+             space.getSubResources({
+                                   
+                                   relation: openapp.ns.role + "data",
+                                   type: "my:ns:functionNote",
+                                   onEach: function(functionNote) {
+                                   functionNote.getRepresentation("rdfjson",function(r){
+                                                                  
+                                                                  var w = document.getElementById("functionList");
+                                                                  var option = document.createElement("option");
+                                                                  option.text = r.text;
+                                                                  option.value = r.text;
+                                                                  option.id= r.text;
+                                                                  w.add(option);
+                                                        
+                                                                  });
+                                   }
+                                   });
+             
+			}
+			
+             function updateRender(selectedParent){
+             
+             $('#eventList').empty();
+             $('#functionList').empty();
+             space.getSubResources({
+                                   
+                                   relation: openapp.ns.role + "data",
+                                   type: "my:ns:eventNote",
+                                   onEach: function(eventNote) {
+                                   eventNote.getRepresentation("rdfjson",function(r){
+                                                               
+                    if(selectedParent==r.parentMicro||selectedParent==r.parentWidget||selectedParent==r.parentTrigger){
+                                   var event = $("<button></button>").text(r.text);
+                                   event.addClass('btn btn-info btn-sm');
+                                   event.attr('id', r.text);
+                                   event.attr('title', r.eventFunction+r.parentWidget);
+                                   event.on("click", function () {
+                                   selectEvent(r.text,r.parentTrigger,r.parentMicro, r.parentWidget,r.eventFunction,r.conditionClause);
+                                                    });
+                                   $("#eventList").append(event);
+                                                               
+                                            }
+     
+                                                               });
+                                   }
+                                   });
+             
+             space.getSubResources({
+                                   
+                                   relation: openapp.ns.role + "data",
+                                   type: "my:ns:triggerNote",
+                                   onEach: function(triggerNote) {
+                                   triggerNote.getRepresentation("rdfjson",function(r){
+                                                                 
+                                   var w = document.getElementById("triggerList");
+                                   var option = document.createElement("option");
+                                   option.text = r.parentWidget+":"+r.parentMicro+":"+r.text;
+                                   w.add(option);
+                                   });
+                                   }
+                                   });
+             
+             
+             space.getSubResources({
+                                   
+                                   relation: openapp.ns.role + "data",
+                                   type: "my:ns:functionNote",
+                                   onEach: function(functionNote) {
+                                   functionNote.getRepresentation("rdfjson",function(r){
+                                                                  
+                                                                  var w = document.getElementById("functionList");
+                                                                  var option = document.createElement("option");
+                                                                  option.text = r.text;
+                                                                  option.value = r.text;
+                                                                  option.id= r.text;
+                                                                  w.add(option);
+                                                                  
+                                                                  });
+                                   }
+                                   });
+             
+             }
+			
+			function publishResourceUpdate(uri){
+				var intent = {		
+					"component": "",
+					"data":uri,
+					"dataType":"text/json",		
+					"action":"ACTION_UPDATE",
+					"flags" :["PUBLISH_GLOBAL"],
+					"extras" :{"ns":"my:ns:eventNote"}
+				};
+				iwcClient.publish(intent);
+			}
+			
+			function publishMessage(username,password){
+				var intent = {		
+					"component": "",
+					"data":"www.example.com",
+					"dataType":"text/json",		
+					"action":"ACTION_MESSAGE",
+					"flags" :["PUBLISH_GLOBAL"],
+					"extras" :{"username":username, "password":password}
+				};
+				iwcClient.publish(intent);
+			}
+            
+		</script>
+		
+		<!-- HTML Block -->
+        
+             <div align="center" style="height:25px;">
+             <div style="padding-top:0px;">
+             <span  class="label label-default" id="parentWidget">All</span>
+             <span  class="label label-danger" id="parentMicro">All</span>
+             <span  class="label label-warning" id="parentTrigger">All</span>
+             </div>
+             </div>
+        
+        
+        
+        <div id="" style="overflow:auto; max-height:100px; height:100px;">
+        <div id="eventList"></div>
+        </div>
+        
+        <div align="center" class="alert alert-info">
+             
+        <button id="closeEdit" style="display:none;" type="button" class="close btn-sm" aria-hidden="true">&times;</button>
+             <h4 id="eventModeAdd" align="center">Add</h4>
+             <h4 id="eventModeEdit" style="display:none;" align="center">Update</h4>
+             
+            <div class="input-group">
+            
+            <span class="input-group-btn">
+            <button id="removeButton" style="display:none;" type="button" class="btn btn-link" onClick="removeEvent()" title="Remove Selected Event">
+             &zwnj;<span class="glyphicon glyphicon-trash"></span>
+             </button>
+             </span>
+ 
+            <input type="text" id="note" class="form-control" placeholder="Event Name"/>
+            <span class="input-group-btn">
+            <button id="addButton" type="button" class="btn btn-info" onClick="addEvent()" title="Add Event">
+            &zwnj;<span class="glyphicon glyphicon-plus"></span>
+            </button>
+             
+             <button id="updateButton" style="display:none;" type="button" class="btn btn-info" onClick="updateEvent()" title="Update">
+             &zwnj;<span class="glyphicon glyphicon-refresh"></span>
+             </button>
+            </span>
+            </div>
+        
+             <select id="triggerList" style="display:none;" class="form-control input-sm">
+             </select>
+             
+            <span>
+            <select id="conditionList" class="form-control input-sm">
+            <option disabled selected>Condition Clause</option>
+            <option value="onclick">onclick</option>
+            <option value="onsubmit">onsubmit</option>
+            <option value=".click()">.click()</option>
+            <option value="onchange">onchange</option>
+            <option value="onfocus">onfocus</option>
+            </select>
+            </span>
+            
+            
+            <select id="functionList" class="form-control input-sm">
+            <option disabled selected>Function</option>
+            </select>
+          
+            </div>
+
+        <script src="js/bootstrap.min.js"></script>
+        <script src="http://code.jquery.com/jquery.min.js"></script>
+        <link href="http://getbootstrap.com/dist/css/bootstrap.css" rel="stylesheet" type="text/css" />
+        <script src="http://getbootstrap.com/dist/js/bootstrap.js"></script>
+        
+        
+        
+	]]>
+  </Content>
+</Module>

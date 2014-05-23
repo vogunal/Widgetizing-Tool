@@ -1,0 +1,1006 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<Module>
+  <ModulePrefs title="Elements"
+		description="A simple note taking widget developed during Dev8eD. No realtime synch involved yet."
+		author="Your Name"
+		author_email="Your Email"
+		height="300">
+  	<Require feature="opensocial-0.8" />
+    <Require feature="openapp" />
+    <OAuth>
+		<Service name="openapp" xmlns:openapp="http://www.role-project.eu/xml/openapp/opensocialext/" 
+			openapp:service="http://purl.org/role/terms/spaceService"
+			openapp:permitReadAppend="http://purl.org/role/terms/data">
+			<Request method="" url=""/>
+			<Authorization url=""/>
+			<Access method="" url=""/>
+		</Service>
+    </OAuth>
+  </ModulePrefs>
+  <Content type="html">
+    <![CDATA[
+		
+        <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>
+		<script src="http://dbis.rwth-aachen.de/gadgets/iwc/lib/iwc.js"></script>
+        <link href="css/bootstrap.css" rel="stylesheet">
+        <link href="http://getbootstrap.com/dist/css/bootstrap.min.css" rel="stylesheet" type="text/css"/>
+        
+             <style>
+             
+             
+             #linearBg1 {
+             /* fallback */
+             background-color: #f0ad4e;
+             background-repeat: repeat-y;
+             
+             /* Safari 4-5, Chrome 1-9 */
+             background: -webkit-gradient(linear, left top, right top, from(#f0ad4e), to(#5cb85c));
+             
+             /* Safari 5.1, Chrome 10+ */
+             background: -webkit-linear-gradient(left, #5cb85c, #f0ad4e);
+             
+             /* Firefox 3.6+ */
+             background: -moz-linear-gradient(left, #5cb85c, #f0ad4e);
+             
+             /* IE 10 */
+             background: -ms-linear-gradient(left, #5cb85c,#f0ad4e);
+             
+             /* Opera 11.10+ */
+             background: -o-linear-gradient(left, #5cb85c, #f0ad4e);
+             }
+             
+
+             </style>
+		
+		<!-- JavaScript Block -->
+		<script>
+			
+			var space;
+			var user;
+			var iwcClient;
+            var parentWidget="";
+            var parentMicro="";
+            var tempParentMicro="";
+            var tempParentWidget="";
+            var editVariable=new Boolean(0);
+            var editTrigger=new Boolean(0);
+            var selectedElementID="";
+			
+			gadgets.util.registerOnLoadHandler(init);
+			
+			function init(){
+				console.log("Widget loaded");
+				
+				space = new openapp.oo.Resource(openapp.param.space());
+				user = new openapp.oo.Resource(openapp.param.user());
+				
+				space.getInfo(function(info) {
+					var spacename = info[openapp.ns.dcterms + "title"];
+					
+				});
+				
+				user.getInfo(function(info) {
+					var username = info[openapp.ns.dcterms + "title"];
+					document.getElementById("uname").innerHTML = username;
+				});
+				
+				iwcClient = new iwc.Client()
+				iwcClient.connect(iwcCallback);
+				
+				renderNotes();
+			}
+			
+			function iwcCallback(intent){
+				console.log("Template: Received intent");
+				console.log(intent);
+				
+				if (intent.action == "ACTION_UPDATE" && 
+					intent.extras.ns == "my:ns:note"){
+					window.location.reload();
+				}
+             
+             if (intent.action == "WIDGET_SELECT") {
+             //if(intent.sender.indexOf("@") > -1){
+             //alert (intent.extras.username + intent.extras.password);
+             parentWidget=intent.extras.widgetID;
+             parentMicro="";
+             document.getElementById("parentWidget").innerHTML=parentWidget;
+             document.getElementById("parentMicro").innerHTML="All";
+             updateRender(parentWidget);
+             closeEditMode();
+             
+             //	}
+             }
+             
+             if (intent.action == "MICRO_SELECT") {
+             //if(intent.sender.indexOf("@") > -1){
+             //alert (intent.extras.username + intent.extras.password);
+             
+             parentMicro=intent.extras.microID;
+             parentWidget=intent.extras.parentWidget;
+             
+             if(parentWidget==""){
+                document.getElementById("parentWidget").innerHTML="No Parent Widget";
+             }
+             
+             else{
+             document.getElementById("parentWidget").innerHTML=parentWidget;
+             }
+             
+             document.getElementById("parentMicro").innerHTML=parentMicro;
+             updateRender(parentMicro);
+             closeEditMode();
+             
+             //	}
+             }
+             
+             if (intent.action == "WIDGET_CHANGE") {
+             document.getElementById("parentWidget").innerHTML=intent.extras.changedTo;
+             updateParentWidget(intent.extras.changedWidget,intent.extras.changedTo);
+             parentWidget=intent.extras.changedTo;
+             //alert(intent.extras.changedWidget+" to "+intent.extras.changedTo);
+             //updateRender(intent.extras.changedTo);
+             //updateMicroList(parentMicro);
+             closeEditMode();
+             }
+             
+             if (intent.action == "MICRO_CHANGE") {
+             document.getElementById("parentMicro").innerHTML=intent.extras.changedTo;
+             document.getElementById("parentWidget").innerHTML=intent.extras.newParentWidget;
+             updateParentMicro(intent.extras.changedWidget,intent.extras.changedTo,intent.extras.newParentWidget);
+             parentMicro=intent.extras.changedTo;
+             parentWidget=intent.extras.newParentWidget;
+             //alert(intent.extras.changedWidget+" to "+intent.extras.changedTo);
+             //updateRender(intent.extras.changedTo);
+             //updateMicroList(parentMicro);
+             closeEditMode();
+             }
+
+
+             
+             
+             
+			}
+			
+			function addTrigger(){
+             var triggerNote = {"text":document.getElementById("note").value,
+             "elementTag":document.getElementById("elementTag").value,
+             "parentWidget":parentWidget,
+             "parentMicro":parentMicro,
+             "elementType":"trigger element"
+             };
+             
+                    space.create({
+                        relation: openapp.ns.role + "data",
+                        type: "my:ns:triggerNote" ,
+                        representation: triggerNote,
+                        callback: function(sub){
+                        publishResourceUpdate(sub.uri);
+                        if(sub.uri!=null){
+                                 if(parentMicro==""&&parentWidget==""){
+                                 renderNotes();
+                                 }
+                                 
+                                 else if(parentMicro!=""){
+                                 updateRender(parentMicro);
+                                 }
+                                 
+                                 else if(parentMicro==""&&parentWidget!=""){
+                                 updateRender(parentWidget);
+                                 }
+
+                        document.getElementById("note").value="";
+                        //window.location.reload();
+                            }
+                                 }
+                        });
+             
+           
+             
+            }
+            
+            function addVariable(){
+            var variableNote = {"text":document.getElementById("note").value,
+                                "elementTag":document.getElementById("elementTag").value,
+                                "parentWidget":parentWidget,
+                                "parentMicro":parentMicro,
+                                "elementType":"variable element"
+                                };
+            
+            space.create({
+            relation: openapp.ns.role + "data",
+            type: "my:ns:variableNote",
+            representation: variableNote,
+            callback: function(sub){
+            publishResourceUpdate(sub.uri);
+                         if(sub.uri!=null){
+                         if(parentMicro==""&&parentWidget==""){
+                         renderNotes();
+                         }
+                         
+                         else if(parentMicro!=""){
+                         updateRender(parentMicro);
+                         }
+                         
+                         else if(parentMicro==""&&parentWidget!=""){
+                         updateRender(parentWidget);
+                         }
+
+                         document.getElementById("note").value="";
+                         //window.location.reload();
+                         }
+            }
+            });
+             
+            
+            
+            }
+			
+             function updateTrigger(){
+             
+             //alert($("#microserviceList option:selected").attr("parentWidget")+" "+$("#microserviceList option:selected").attr("parentMicro"));
+             
+             //edit microservice
+             var newRepresentation = {"text":document.getElementById("note").value,
+                                    "elementTag":document.getElementById("elementTag").value,
+                                    "parentWidget":$("#microserviceList option:selected").attr("parentWidget"),
+                                    "parentMicro":$("#microserviceList option:selected").attr("parentMicro"),
+                                    "elementType":"trigger element"};
+             
+             space.getSubResources({
+                                   
+                                   relation: openapp.ns.role + "data",
+                                   type: "my:ns:triggerNote",
+                                   //callback: window.location.reload();,
+                                   onEach: function(triggerNote) {
+                                   triggerNote.getRepresentation("rdfjson",function(r){
+                                                               
+                                                               if(selectedElementID==r.text){
+                                                               
+                                                               //alert("Editing " +r.text);
+                                                               triggerNote.setRepresentation(newRepresentation);
+                                                               
+                                                                 if(parentMicro==""&&parentWidget==""){
+                                                                 renderNotes();
+                                                                 }
+                                                                 
+                                                                 else if(parentMicro!=""){
+                                                                 updateRender(parentMicro);
+                                                                 }
+                                                                 
+                                                                 else if(parentMicro==""&&parentWidget!=""){
+                                                                 updateRender(parentWidget);
+                                                                 }
+                                                                 
+                                                                 
+                                                                 
+                                                                 closeEditMode();
+                                                               
+                                                               }
+                                                               });
+                                   }
+                                   //window.location.reload();
+                                   
+                                   });
+             
+             //var resource = new openapp.oo.Resource("http://role-sandbox.eu/spaces/edittest/z1kgGqaQ1_");
+             
+
+             }
+             
+             
+             function updateVariable(){
+             
+             //alert($("#microserviceList option:selected").attr("parentWidget")+" "+$("#microserviceList option:selected").attr("parentMicro"));
+             
+             //edit microservice
+             var newRepresentation = {"text":document.getElementById("note").value,
+             "elementTag":document.getElementById("elementTag").value,
+             "parentWidget":$("#microserviceList option:selected").attr("parentWidget"),
+             "parentMicro":$("#microserviceList option:selected").attr("parentMicro"),
+             "elementType":"variable element"};
+             
+             space.getSubResources({
+                                   
+                                   relation: openapp.ns.role + "data",
+                                   type: "my:ns:variableNote",
+                                   //callback: window.location.reload();,
+                                   onEach: function(variableNote) {
+                                   variableNote.getRepresentation("rdfjson",function(r){
+                                                                 
+                                                                 if(selectedElementID==r.text){
+                                                                 
+                                                                 //alert("Editing " +r.text);
+                                                                 variableNote.setRepresentation(newRepresentation);
+                                                                 
+                                                                 if(parentMicro==""&&parentWidget==""){
+                                                                 renderNotes();
+                                                                 }
+                                                                 
+                                                                 else if(parentMicro!=""){
+                                                                 updateRender(parentMicro);
+                                                                 }
+                                                                 
+                                                                 else if(parentMicro==""&&parentWidget!=""){
+                                                                 updateRender(parentWidget);
+                                                                 }
+                                                                 
+                                                                 
+                                                                 
+                                                                 closeEditMode();
+                                                                 
+                                                                 }
+                                                                 });
+                                   }
+                                   //window.location.reload();
+                                   
+                                   });
+             
+             //var resource = new openapp.oo.Resource("http://role-sandbox.eu/spaces/edittest/z1kgGqaQ1_");
+             
+             
+             }
+             
+             
+             function updateParentWidget(changedWidget,changedTo){
+             
+             //$('#elementList').empty();
+             
+             space.getSubResources({
+                                   
+                                   relation: openapp.ns.role + "data",
+                                   type: "my:ns:triggerNote",
+                                   //callback: window.location.reload();,
+                                   onEach: function(triggerNote) {
+                                   triggerNote.getRepresentation("rdfjson",function(r){
+                                                               
+                                                               
+                                     var newRepresentation = {"text":r.text,
+                                                               "parentWidget":changedTo,
+                                                               "microType":r.microType,
+                                                               "elementTag":r.elementTag,
+                                                               "parentMicro":r.parentMicro,
+                                                               "elementType":r.elementType};
+                                                                 
+                                                               if(changedWidget==r.parentWidget){
+                                                               //alert(r.text+" in "+changedWidget+" to "+changedTo);
+                                                               triggerNote.setRepresentation(newRepresentation);
+                                                                 
+                                                               //microNote.del();
+                                                               
+                                                               }
+                                                               });
+                                   }
+                                   //window.location.reload();
+                                   
+                                   });
+             
+             
+             space.getSubResources({
+                                   
+                                   relation: openapp.ns.role + "data",
+                                   type: "my:ns:variableNote",
+                                   //callback: window.location.reload();,
+                                   onEach: function(variableNote) {
+                                   variableNote.getRepresentation("rdfjson",function(r){
+                                                                 
+                                                                 
+                                                                 var newRepresentation = {"text":r.text,
+                                                                 "parentWidget":changedTo,
+                                                                 "microType":r.microType,
+                                                                 "elementTag":r.elementTag,
+                                                                 "parentMicro":r.parentMicro,
+                                                                 "elementType":r.elementType};
+                                                                 
+                                                                 if(changedWidget==r.parentWidget){
+                                                                 //alert(r.text+" in "+changedWidget+" to "+changedTo);
+                                                                 variableNote.setRepresentation(newRepresentation);
+                                                                 
+                                                                 //updateRender(changedTo);
+  
+                                                                 //microNote.del();
+                                                                 
+                                                                 }
+                                                                 });
+                                   }
+                                   //window.location.reload();
+                                   
+                                   });
+             
+             //var resource = new openapp.oo.Resource("http://role-sandbox.eu/spaces/edittest/z1kgGqaQ1_");
+             
+             //setTimeout(function () { window.location.reload(); }, 3500);
+             
+             }
+             
+             
+             
+             function updateParentMicro(changedMicro,changedTo,newParentWidget){
+             
+             //$('#elementList').empty();
+             
+             space.getSubResources({
+                                   
+                                   relation: openapp.ns.role + "data",
+                                   type: "my:ns:triggerNote",
+                                   //callback: window.location.reload();,
+                                   onEach: function(triggerNote) {
+                                   triggerNote.getRepresentation("rdfjson",function(r){
+                                                                 
+                                                                 
+                                                                 var newRepresentation = {"text":r.text,
+                                                                 "parentWidget":newParentWidget,
+                                                                 "microType":r.microType,
+                                                                 "elementTag":r.elementTag,
+                                                                 "parentMicro":changedTo,
+                                                                 "elementType":r.elementType};
+                                                                 
+                                                                 if(changedMicro==r.parentMicro){
+                                                                 //alert(r.text+" in "+changedWidget+" to "+changedTo);
+                                                                 triggerNote.setRepresentation(newRepresentation);
+                                                                 
+                                                                 //microNote.del();
+                                                                 
+                                                                 }
+                                                                 });
+                                   }
+                                   //window.location.reload();
+                                   
+                                   });
+             
+             
+             space.getSubResources({
+                                   
+                                   relation: openapp.ns.role + "data",
+                                   type: "my:ns:variableNote",
+                                   //callback: window.location.reload();,
+                                   onEach: function(variableNote) {
+                                   variableNote.getRepresentation("rdfjson",function(r){
+                                                                  
+                                                                  
+                                                                  var newRepresentation = {"text":r.text,
+                                                                  "parentWidget":newParentWidget,
+                                                                  "microType":r.microType,
+                                                                  "elementTag":r.elementTag,
+                                                                  "parentMicro":changedTo,
+                                                                  "elementType":r.elementType};
+                                                                  
+                                                                  if(changedMicro==r.parentMicro){
+                                                                  //alert(r.text+" in "+changedWidget+" to "+changedTo);
+                                                                  variableNote.setRepresentation(newRepresentation);
+                                                                  
+                                                                  //updateRender(changedTo);
+                                                                  
+                                                                  //microNote.del();
+                                                                  
+                                                                  }
+                                                                  });
+                                   }
+                                   //window.location.reload();
+                                   
+                                   });
+             
+             //var resource = new openapp.oo.Resource("http://role-sandbox.eu/spaces/edittest/z1kgGqaQ1_");
+             
+             //setTimeout(function () { window.location.reload(); }, 3500);
+             
+             }
+      
+            function renderNotes(){
+                $('#elementList').html("Loading Elements of ");
+                $('#elementList').empty();
+                space = new openapp.oo.Resource(openapp.param.space());
+                space.getSubResources({
+                
+                    relation: openapp.ns.role + "data",
+                    type: "my:ns:triggerNote",
+                    onEach: function(triggerNote) {
+                    triggerNote.getRepresentation("rdfjson",function(r){
+                    var triggerElement = $("<button></button>").text(r.text);
+                    triggerElement.addClass('btn btn-warning btn-sm');
+                    triggerElement.attr('id', r.text);
+                    triggerElement.attr('title', r.text);
+                    triggerElement.on("click", function () {
+                    selectTrigger(r.text, r.parentWidget,r.parentMicro, r.elementTag,r.elementType);
+                                                            });
+                    $("#elementList").append(triggerElement);
+                                });
+                            }
+                        });
+                        
+                space.getSubResources({
+                        
+                        relation: openapp.ns.role + "data",
+                        type: "my:ns:variableNote",
+                        onEach: function(variableNote) {
+                        variableNote.getRepresentation("rdfjson",function(r){
+                        var varElement = $("<button></button>").text(r.text);
+                        varElement.addClass('btn btn-success btn-sm');
+                        varElement.attr('id', r.text);
+                        varElement.attr('title', r.elementTag+r.parentMicro+r.parentWidget+r.elementType);
+                        varElement.on("click", function () {
+                        selectVariable(r.text, r.parentWidget,r.parentMicro, r.elementTag,r.elementType);
+                        });
+
+                        $("#elementList").append(varElement);
+                        });
+                        }
+                        });
+			}
+			
+            
+             function selectVariable(elementID, parentWidget,parentMicro,elementTag, elementType){
+             
+             publishVariableMessage();
+             //alert(microService+" "+parentWidget);
+             $('#microserviceList').empty();
+             space = new openapp.oo.Resource(openapp.param.space());
+             space.getSubResources({
+                                   
+                                   relation: openapp.ns.role + "data",
+                                   type: "my:ns:variableNote",
+                                   onEach: function(variableNote) {
+                                   variableNote.getRepresentation("rdfjson",function(r){
+                                        
+                                            if(elementID==r.text){
+                                                    
+                                                    updateMicroList(r.parentMicro);
+                                                       }
+                                   });
+                                   }
+                                   });
+             
+             
+             
+             
+             selectedElementID=elementID;
+             document.getElementById("elementModeEdit").innerHTML=selectedElementID;
+             $('#note').val(elementID);
+             //$('#Grid/Table:last').removeClass("btn btn-default").addClass("btn btn-default active");
+             //$('#Form:last').removeClass("btn btn-default active").addClass("btn btn-default");
+             $('#elementTag').val(elementTag);
+             
+             if(editTrigger==false&&editVariable==false)
+             {
+             //$('#widgetList').toggle(400);
+             $('#addVariable').toggle(400);
+             $('#addTrigger').toggle(400);
+             $('#updateVariable').toggle(400);
+             $('#removeVariable').toggle(400);
+             $('#closeEdit').toggle(400);
+             $('#elementModeAdd').toggle(400);
+             $('#elementModeEdit').toggle(400);
+             $('#microserviceList').toggle(400);
+             editVariable=true;
+             }
+             
+             else if(editTrigger==true&&editVariable==false)
+             {
+             //$('#widgetList').toggle(400);
+             $('#updateVariable').toggle(400);
+             $('#updateTrigger').toggle(400);
+             $('#removeTrigger').toggle(400);
+             $('#removeVariable').toggle(400);
+             editVariable=true;
+             editTrigger=false;
+             }
+
+             
+             
+             }
+             
+             
+             function selectTrigger(elementID, parentWidget,parentMicro,elementTag, elementType){
+             
+             //publishMessage(selectedMicroService,parentWidget);
+             //alert(microService+" "+parentWidget);
+             
+             $('#microserviceList').empty();
+             space = new openapp.oo.Resource(openapp.param.space());
+             space.getSubResources({
+                                   
+                                   relation: openapp.ns.role + "data",
+                                   type: "my:ns:triggerNote",
+                                   onEach: function(triggerNote) {
+                                   triggerNote.getRepresentation("rdfjson",function(r){
+                                                                  
+                                                                  if(elementID==r.text){
+                                                                  
+                                                                  updateMicroList(r.parentMicro);
+                                                                  }
+                                                                  });
+                                   }
+                                   });
+
+             
+             
+             
+             selectedElementID=elementID;
+             document.getElementById("elementModeEdit").innerHTML=selectedElementID;
+             $('#elementTag').val(elementTag);
+             $('#note').val(elementID);
+             
+             
+             publishTriggerMessage(elementID,parentWidget,parentMicro);
+             //$('#Grid/Table:last').removeClass("btn btn-default").addClass("btn btn-default active");
+             //$('#Form:last').removeClass("btn btn-default active").addClass("btn btn-default");
+             
+             
+             if(editVariable==false&&editTrigger==false)
+             {
+             //$('#widgetList').toggle(400);
+             $('#addTrigger').toggle(400);
+             $('#addVariable').toggle(400);
+             $('#updateTrigger').toggle(400);
+             $('#removeTrigger').toggle(400);
+             $('#closeEdit').toggle(400);
+             $('#elementModeAdd').toggle(400);
+             $('#elementModeEdit').toggle(400);
+             $('#microserviceList').toggle(400);
+             editVariable=false;
+             editTrigger=true;
+             }
+             
+             else if(editVariable==true&&editTrigger==false)
+             {
+             //$('#widgetList').toggle(400);
+             $('#updateVariable').toggle(400);
+             $('#updateTrigger').toggle(400);
+             $('#removeTrigger').toggle(400);
+             $('#removeVariable').toggle(400);
+             editVariable=false;
+             editTrigger=true;
+             }
+             
+             }
+             
+             
+             function removeTrigger(){
+             
+             //microService name to be deleted retrieved from text input
+             //that contains "text" property of microNote representation
+             
+             space.getSubResources({
+                                   
+                                   relation: openapp.ns.role + "data",
+                                   type: "my:ns:triggerNote",
+                                   //callback: window.location.reload();,
+                                   onEach: function(triggerNote) {
+                                   triggerNote.getRepresentation("rdfjson",function(r){
+                                                               
+                                                               if(selectedElementID==r.text){
+                                                               
+                                                               //alert("Deleting " +r.text);
+                                                               triggerNote.del();
+                                                               
+                                                               if(parentMicro==""&&parentWidget==""){
+                                                                 renderNotes();
+                                                                }
+                                                                
+                                                                else if(parentMicro!=""){
+                                                                 updateRender(parentMicro);
+                                                                 }
+                                                                 
+                                                                else if(parentMicro==""&&parentWidget!=""){
+                                                                 updateRender(parentWidget);
+                                                                 }
+                                                                 
+                                                                
+
+                                                               closeEditMode();
+                                                               }
+                                                               });
+                                   }
+                                   //window.location.reload();
+                                   
+                                   });
+             
+             }
+             
+             function removeVariable(){
+             
+             //microService name to be deleted retrieved from text input
+             //that contains "text" property of microNote representation
+             
+             space.getSubResources({
+                                   
+                                   relation: openapp.ns.role + "data",
+                                   type: "my:ns:variableNote",
+                                   //callback: window.location.reload();,
+                                   onEach: function(variableNote) {
+                                   variableNote.getRepresentation("rdfjson",function(r){
+                                                                 
+                                                                 if(selectedElementID==r.text){
+                                                                 
+                                                                 //alert("Deleting " +r.text);
+                                                                 variableNote.del();
+                                                                 
+                                                                 if(parentMicro==""&&parentWidget==""){
+                                                                 renderNotes();
+                                                                 }
+                                                                 
+                                                                 else if(parentMicro!=""){
+                                                                 updateRender(parentMicro);
+                                                                 }
+                                                                 
+                                                                 else if(parentMicro==""&&parentWidget!=""){
+                                                                 updateRender(parentWidget);
+                                                                 }
+                                                                 
+                                                                 
+                                                                 
+                                                                 closeEditMode();
+                                                                 }
+                                                                 });
+                                   }
+                                   //window.location.reload();
+                                   
+                                   });
+             
+             //var resource = new openapp.oo.Resource("http://role-sandbox.eu/spaces/edittest/z1kgGqaQ1_");
+             
+             
+             }
+             
+             
+             function closeEditMode(){
+                                      
+                        if(editTrigger==true){
+                         
+                                      $('#addVariable').toggle(400);
+                                      $('#updateTrigger').toggle(400);
+                                      $('#removeTrigger').toggle(400);
+                                      $('#addTrigger').toggle(400);
+                                      $('#closeEdit').toggle(400);
+                                      $('#note').val("");
+                                      $('#elementModeAdd').toggle(400);
+                                      $('#elementModeEdit').toggle(400);
+                                      $('#microserviceList').toggle(400);
+                                      
+                                      
+                        }
+                                      
+                        
+                        else if(editVariable==true){
+                                      
+                                      $('#addVariable').toggle(400);
+                                      $('#updateVariable').toggle(400);
+                                      $('#removeVariable').toggle(400);
+                                      $('#addTrigger').toggle(400);
+                                      $('#closeEdit').toggle(400);
+                                      $('#note').val("");
+                                      $('#elementModeAdd').toggle(400);
+                                      $('#elementModeEdit').toggle(400);
+                                      $('#microserviceList').toggle(400);
+                                      
+                                      }
+                                      
+                                      
+                                      editTrigger=false;
+                                      editVariable=false;
+                            
+                            
+                          //  $('#widgetList').toggle(400);
+                            
+                               }
+             
+             function updateRender(selectedParent){
+             
+             $('#elementList').empty();
+             space = new openapp.oo.Resource(openapp.param.space());
+             space.getSubResources({
+                                   
+                       relation: openapp.ns.role + "data",
+                       type: "my:ns:triggerNote",
+                       onEach: function(triggerNote) {
+                       triggerNote.getRepresentation("rdfjson",function(r){
+                                                     
+                       if(selectedParent==r.parentMicro||selectedParent==r.parentWidget){
+                       var triggerElement = $("<button></button>").text(r.text);
+                       triggerElement.addClass('btn btn-warning btn-sm');
+                       triggerElement.attr('id', r.text);
+                       triggerElement.attr('title', r.text);
+                       triggerElement.on("click", function () {
+                       selectTrigger(r.text, r.parentWidget, r.parentMicro, r.elementTag,r.elementType);
+                                   });
+                      $("#elementList").append(triggerElement);
+                                   }
+                                   });
+                                   }
+                                   });
+             
+             space.getSubResources({
+                                   
+                      relation: openapp.ns.role + "data",
+                      type: "my:ns:variableNote",
+                      onEach: function(variableNote) {
+                      variableNote.getRepresentation("rdfjson",function(r){
+                                                     
+                      if(selectedParent==r.parentMicro||selectedParent==r.parentWidget){
+                      var varElement = $("<button></button>").text(r.text);
+                      varElement.addClass('btn btn-success btn-sm');
+                      varElement.attr('id', r.text);
+                      varElement.attr('title', r.elementTag+r.parentMicro+r.parentWidget+r.elementType);
+                      varElement.on("click", function () {
+                      selectVariable(r.text, r.parentWidget, r.parentMicro, r.elementTag,r.elementType);
+                      });
+                      $("#elementList").append(varElement);
+                                   }
+                                   });
+                                   }
+                                   });
+             }
+             
+             
+			function updateMicroList(parentMicro){
+             
+             $('#microserviceList').empty();
+             var parentlessOption=document.createElement("option");
+             parentlessOption.text="--- Parent Micro-service ---";
+             parentlessOption.selected="true";
+             parentlessOption.value="";
+             parentlessOption.disabled="true";
+             microserviceList.add(parentlessOption);
+ 
+             space.getSubResources({
+                                   
+                                   relation: openapp.ns.role + "data",
+                                   type: "my:ns:microNote",
+                                   onEach: function(microNote) {
+                                   microNote.getRepresentation("rdfjson",function(r){
+                                                               
+                                                               var w = document.getElementById("microserviceList");
+                                                               var option = document.createElement("option");
+                                                               if(r.text==parentMicro){
+                                                               option.selected="true";
+                                                               }
+                                                               
+                                                               option.text =r.parentWidget+" : "+r.text;
+                                                               option.value=r.text;
+                                                               option.id=r.text;
+                                                               w.add(option);
+                                                               $('#'+r.text).attr('parentWidget', r.parentWidget);
+                                                               $('#'+r.text).attr('parentMicro', r.text);
+                                                               
+                                                               });
+                                   }
+                                   });
+             
+             }
+             
+             
+			function publishResourceUpdate(uri){
+				var intent = {		
+					"component": "",
+					"data":uri,
+					"dataType":"text/json",		
+					"action":"ACTION_UPDATE",
+					"flags" :["PUBLISH_GLOBAL"],
+					"extras" :{"ns":"my:ns:triggerNote","ns":"my:ns:variableNote"}
+				};
+				iwcClient.publish(intent);
+			}
+			
+			function publishVariableMessage(){
+				var intent = {		
+					"component": "",
+					"data":"www.example.com",
+					"dataType":"text/json",		
+					"action":"VARIABLE_SELECT",
+					"flags" :["PUBLISH_GLOBAL"],
+					"extras" :{}
+				};
+				iwcClient.publish(intent);
+			}
+             
+            
+             function publishTriggerMessage(parentTrigger,parentWidget,parentMicro){
+             var intent = {
+             "component": "",
+             "data":"www.example.com",
+             "dataType":"text/json",
+             "action":"TRIGGER_SELECT",
+             "flags" :["PUBLISH_GLOBAL"],
+             "extras" :{"parentTrigger":parentTrigger,"widgetID":parentWidget,"parentWidget":parentWidget, "microID":parentMicro}
+             };
+             iwcClient.publish(intent);
+             }
+            
+		</script>
+		
+		<!-- HTML Block -->
+        
+             <div align="center" style="height:25px;">
+             <div style="padding-top:0px;">
+             <span  class="label label-default" id="parentWidget">All</span>
+             <span  class="label label-danger" id="parentMicro">All</span>
+             </div>
+             </div>
+        
+        
+        
+        <div id="elementList" style="overflow:auto; max-height:100px; height:100px;"></div>
+        
+        
+        <div id="linearBg1" align="center" class="alert alert-warning">
+             
+             <button id="closeEdit" style="display:none;" type="button" class="close btn-sm" aria-hidden="true" onclick="closeEditMode();">&times;</button>
+        <h4 id="elementModeAdd" style="color:#FFFFCC;" align="center">Add</h4>
+        <h4 id="elementModeEdit" style="display:none; color:#FFFFCC;" align="center">Update</h4>
+
+        
+        <div class="input-group">
+        <span class="input-group-btn">
+        <button id="removeVariable" style="display:none;" type="button" class="btn btn-link" onClick="removeVariable()" title="Remove Selected Variable">
+             &zwnj;<span class="glyphicon glyphicon-trash"></span>
+             </button>
+             
+        <button id="updateTrigger" style="display:none;" type="button" class="btn btn-warning" onClick="updateTrigger()" title="Update Trigger">
+             &zwnj;<span class="glyphicon glyphicon-refresh"></span>
+        </button>
+        <button id="addTrigger" type="button" class="btn btn-warning" onClick="addTrigger()" title="Add Trigger">
+        &zwnj;<span class="glyphicon glyphicon-plus"></span>
+        </button>
+        </span>
+        <input type="text" id="note" class="form-control" placeholder="&#8592; Trigger &#124;&#124; Variable ID &#8594;"/>
+        <span class="input-group-btn">
+        <button id="updateVariable" style="display:none;" type="button" class="btn btn-success" onClick="updateVariable()" title="Update">
+             &zwnj;<span class="glyphicon glyphicon-refresh"></span>
+        </button>
+        <button id="addVariable" type="button" class="btn btn-success" onClick="addVariable()" title="Add Variable">
+        &zwnj;<span class="glyphicon glyphicon-plus"></span>
+        </button>
+        
+        <button id="removeTrigger" style="display:none;" type="button" class="btn btn-link" onClick="removeTrigger()" title="Remove Selected Trigger">
+             &zwnj;<span class="glyphicon glyphicon-trash"></span>
+             </button>
+        </span>
+        </div>
+        
+             <select id="microserviceList" style="display:none;" class="form-control input-sm">
+             <option disabled selected>MicroList</option>
+             </select>
+            
+            <select id="elementTag" class="form-control input-sm">
+            <option disabled selected>Tag</option>
+            <optgroup label="Common Triggers">
+            <option value="button">button</option>
+            <option value="input/submit">input/submit</option>
+            </optgroup>
+            <optgroup label="Common Variables">
+            <option value="input/text">input/text</option>
+            <option value="input/checkbox">input/checkbox</option>
+            <option value="input/color">input/color</option>
+            <option value="input/date">input/date</option>
+            <option value="select/option">select/option</option>
+            <option value="input/datetime">input/datetime</option>
+            <option value="input/datetime-local">input/datetime-local</option>
+            <option value="input/email">input/email</option>
+            <option value="input/image">input/image</option>
+            <option value="input/password">input/password</option>
+            <option value="input/radio">input/radio</option>
+            <option value="input/range">input/range</option>
+            <option value="input/search">input/search</option>
+            <option value="input/time">input/time</option>
+            <option value="input/url">input/url</option>
+            <option value="input/week">input/week</option>
+            <option value="div">div</option>
+            <option value="a">a</option>
+            <option value="p">p</option>
+            <option value="td">td</option>
+            <option value="other">Other</option>
+            </optgroup>
+            </select>
+
+            </div>
+
+        
+        <script src="js/bootstrap.min.js"></script>
+        <script src="http://code.jquery.com/jquery.min.js"></script>
+        <script src="http://getbootstrap.com/dist/js/bootstrap.js"></script>
+        
+        
+        
+	]]>
+  </Content>
+</Module>

@@ -1,0 +1,386 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<Module>
+  <ModulePrefs title="Widgets"
+		description="A simple note taking widget developed during Dev8eD. No realtime synch involved yet."
+		author="Your Name"
+		author_email="Your Email"
+		height="300">
+  	<Require feature="opensocial-0.8" />
+    <Require feature="openapp" />
+    <OAuth>
+		<Service name="openapp" xmlns:openapp="http://www.role-project.eu/xml/openapp/opensocialext/" 
+			openapp:service="http://purl.org/role/terms/spaceService"
+			openapp:permitReadAppend="http://purl.org/role/terms/data">
+			<Request method="" url=""/>
+			<Authorization url=""/>
+			<Access method="" url=""/>
+		</Service>
+    </OAuth>
+  </ModulePrefs>
+  <Content type="html">
+    <![CDATA[
+		
+        <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>
+		<script src="http://dbis.rwth-aachen.de/gadgets/iwc/lib/iwc.js"></script>
+        <link href="css/bootstrap.css" rel="stylesheet">
+        
+		
+		<!-- JavaScript Block -->
+		<script>
+			
+			var space;
+			var user;
+			 var iwcClient;
+             var editMode=new Boolean(0);
+             var selectedWidgetID="";
+			
+			gadgets.util.registerOnLoadHandler(init);
+			
+			function init(){
+				console.log("Widget loaded");
+				
+				space = new openapp.oo.Resource(openapp.param.space());
+				user = new openapp.oo.Resource(openapp.param.user());
+				
+				space.getInfo(function(info) {
+					var spacename = info[openapp.ns.dcterms + "title"];
+					document.getElementById("sname").innerHTML = spacename;
+				});
+				
+				user.getInfo(function(info) {
+					var username = info[openapp.ns.dcterms + "title"];
+					document.getElementById("uname").innerHTML = username;
+				});
+             
+            
+				
+				iwcClient = new iwc.Client()
+				iwcClient.connect(iwcCallback);
+				
+				renderNotes();
+			}
+			
+			function iwcCallback(intent){
+				console.log("Template: Received intent");
+				console.log(intent);
+				
+				if (intent.action == "ACTION_UPDATE" && 
+					intent.extras.ns == "my:ns:note"){
+					window.location.reload();
+				}
+				
+				if (intent.action == "ACTION_MESSAGE") {
+					if(intent.sender.indexOf("@") > -1){
+					alert ("I received this");
+					}
+				}
+             
+                if (intent.action == "MICRO_SELECT") {
+             //if(intent.sender.indexOf("@") > -1){
+             //alert (intent.extras.username + intent.extras.password);
+             
+                    closeEdit();
+             
+             //	}
+             }
+             
+             if (intent.action == "TRIGGER_SELECT") {
+             //if(intent.sender.indexOf("@") > -1){
+             //alert (intent.extras.username + intent.extras.password);
+             closeEdit();
+             
+             //	}
+             }
+             
+             if (intent.action == "VARIABLE_SELECT") {
+             //if(intent.sender.indexOf("@") > -1){
+             //alert (intent.extras.username + intent.extras.password);
+             closeEdit();
+             }
+             
+			}
+			
+			function addWidget(){
+             
+             publishAddMessage(document.getElementById("note").value);
+
+             var widgetNote = {"text":document.getElementById("note").value};
+                                    space.create({
+                        relation: openapp.ns.role + "data",
+                        type: "my:ns:widgetNote",
+                        representation: widgetNote,
+                        callback: function(sub){
+                        publishResourceUpdate(sub.uri);
+                                                 console.log("Here1");
+                                                 console.log(sub.uri);
+                                                 //window.location.reload();
+                                                 if(sub.uri!=null){
+                                                 renderNotes();
+                                                 }
+                                                 
+                            }
+                        });
+            }
+             
+             
+             
+             
+             
+             
+             
+             
+             function updateWidget(){
+             
+             //edit microservice
+             var changedTo= document.getElementById("note").value;
+             publishChangeMessage(selectedWidgetID,changedTo);
+             var newRepresentation = {"text":document.getElementById("note").value};
+             
+             space.getSubResources({
+                                   
+                                   relation: openapp.ns.role + "data",
+                                   type: "my:ns:widgetNote",
+                                   //callback: window.location.reload();,
+                                   onEach: function(widgetNote) {
+                                   widgetNote.getRepresentation("rdfjson",function(r){
+                                                               
+                                                               if(selectedWidgetID==r.text){
+                                                               
+                                                               //alert("Updating " +r.text);
+                                                               widgetNote.setRepresentation(newRepresentation);
+                                                               //microNote.del();
+                                                               closeEdit();
+                                                               renderNotes();
+                                                               
+                                                               }
+                                                               });
+                                   }
+                                   //window.location.reload();
+                                   
+                                   });
+             
+             //var resource = new openapp.oo.Resource("http://role-sandbox.eu/spaces/edittest/z1kgGqaQ1_");
+            
+             
+             }
+             
+             function removeWidget(){
+             
+             //microService name to be deleted retrieved from text input
+             //that contains "text" property of microNote representation
+             publishRemoveMessage();
+
+             space.getSubResources({
+                                   
+                                   relation: openapp.ns.role + "data",
+                                   type: "my:ns:widgetNote",
+                                   //callback: window.location.reload();,
+                                   onEach: function(widgetNote) {
+                                   widgetNote.getRepresentation("rdfjson",function(r){
+                                                               
+                                                               
+                                                               if(selectedWidgetID==r.text){
+                                                               
+                                                               //alert("Deleting " +r.text);
+                                                               widgetNote.del();
+                                                               //alert(widgetNote.getURI());
+                                                               
+                                                               closeEdit();
+                                                               renderNotes();
+                                                               }
+                                                            
+                                                               
+                                                               
+                                                               });
+                                   }
+                                   //window.location.reload();
+                                   
+                                   });
+             
+             //var resource = new openapp.oo.Resource("http://role-sandbox.eu/spaces/edittest/z1kgGqaQ1_")
+             }
+            
+            
+            function closeEdit(){
+            
+            
+            if(editMode==true){
+            editMode=false;
+            $('#addButton').toggle(400);
+            $('#updateButton').toggle(400);
+            $('#removeButton').toggle(400);
+            $('#closeEdit').toggle(400);
+            $('#note').val("");
+            $('#widgetModeAdd').toggle(400);
+            $('#widgetModeEdit').toggle(400);
+            }
+             
+            }
+        
+
+
+
+			function selectWidget(selectedWidget){
+             
+             publishMessage(selectedWidget);
+             selectedWidgetID=selectedWidget;
+             $('#note').val(selectedWidget);
+             document.getElementById("widgetModeEdit").innerHTML=selectedWidgetID;
+             //$('#Grid/Table:last').removeClass("btn btn-default").addClass("btn btn-default active");
+             //$('#Form:last').removeClass("btn btn-default active").addClass("btn btn-default");
+             
+             
+             if(editMode==false)
+                {
+                $('#addButton').toggle(400);
+                $('#updateButton').toggle(400);
+                $('#removeButton').toggle(400);
+                $('#closeEdit').toggle(400);
+                $('#widgetModeAdd').toggle(400);
+                $('#widgetModeEdit').toggle(400);
+             
+                editMode=true;
+                }
+                
+			}
+            
+            
+            function renderNotes(){
+             
+             $("#widgetList").empty();
+             space = new openapp.oo.Resource(openapp.param.space());
+             
+             space.getSubResources({
+                
+                    relation: openapp.ns.role + "data",
+                    type: "my:ns:widgetNote",
+                    onEach: function(widgetNote) {
+                    widgetNote.getRepresentation("rdfjson",function(r){
+                    
+                    var widget = $("<button></button>").text(r.text);
+                    widget.addClass('btn btn-default btn-sm');
+                    widget.attr('id', r.text);
+                    widget.attr('title', r.text);
+                    widget.on("click", function () {
+                    selectWidget(r.text); });
+                    $("#widgetList").append(widget);
+                                });
+                            }
+                        });
+			}
+			
+			function publishResourceUpdate(uri){
+				var intent = {		
+					"component": "",
+					"data":uri,
+					"dataType":"text/json",		
+					"action":"ACTION_UPDATE",
+					"flags" :["PUBLISH_GLOBAL"],
+					"extras" :{"ns":"my:ns:widgetNote"}
+				};
+				iwcClient.publish(intent);
+			}
+			
+			function publishMessage(selectedWidget){
+				var intent = {		
+					"component": "",
+					"data":"www.example.com",
+					"dataType":"text/json",		
+					"action":"WIDGET_SELECT",
+					"flags" :["PUBLISH_GLOBAL"],
+					"extras" :{"widgetID":selectedWidget}
+				};
+				iwcClient.publish(intent);
+			}
+             
+             function publishChangeMessage(changedWidget, changedTo){
+             var intent = {
+             "component": "",
+             "data":"www.example.com",
+             "dataType":"text/json",
+             "action":"WIDGET_CHANGE",
+             "flags" :["PUBLISH_GLOBAL"],
+             "extras" :{"changedWidget":changedWidget,"changedTo":changedTo}
+             };
+             iwcClient.publish(intent);
+             }
+            
+             function publishAddMessage(addedWidget){
+             var intent = {
+             "component": "",
+             "data":"www.example.com",
+             "dataType":"text/json",
+             "action":"WIDGET_ADD",
+             "flags" :["PUBLISH_GLOBAL"],
+             "extras" :{"addedWidget":addedWidget}
+             };
+             iwcClient.publish(intent);
+             }
+             
+             function publishRemoveMessage(){
+             var intent = {
+             "component": "",
+             "data":"www.example.com",
+             "dataType":"text/json",
+             "action":"WIDGET_REMOVE",
+             "flags" :["PUBLISH_GLOBAL"],
+             "extras" :{}
+             };
+             iwcClient.publish(intent);
+             }
+
+            
+		</script>
+		
+		<!-- HTML Block -->
+        
+        <div align="center" style="height:25px;">
+        <div style="padding-top:5px;">
+        <span style="background-color:#333;" class="label label-default" id="sname"></span>
+        </div>
+        </div>
+        
+        <div id="" style="overflow:auto; max-height:100px; height:100px;">
+        <div id="widgetList"></div>
+        </div>
+   
+        <div align="center" class="alert alert-danger" style="background-color:#eee;">
+        
+        <button id="closeEdit" style="display:none;" type="button" class="close btn-sm" onclick="closeEdit()" aria-hidden="true">&times;</button>
+        <h4 style="color:#555;" id="widgetModeAdd" align="center">Add</h4>
+        <h4 id="widgetModeEdit" style="display:none; color:#555;" align="center">Update</h4>
+        
+             <div class="input-group">
+             <span class="input-group-btn">
+             <button id="removeButton" style="display:none;" type="button" class="btn btn-link" onClick="removeWidget()" title="Delete">
+             &zwnj;<span class="glyphicon glyphicon-trash"></span>
+             </button>
+             </span>
+
+             <input type="text" id="note" class="form-control" placeholder="Widget Name"/>
+             <span class="input-group-btn">
+             <button id="addButton" type="button" class="btn btn-default" onClick="addWidget()" title="Add Widget">
+             &zwnj;<span class="glyphicon glyphicon-plus"></span>
+             </button>
+             
+             <button id="updateButton" style="display:none;" type="button" class="btn btn-default" onClick="updateWidget()" title="Update">
+             &zwnj;<span class="glyphicon glyphicon-refresh"></span>
+             </button>
+             </span>
+             </div>
+             
+        </div>
+             
+
+
+
+        <script src="js/bootstrap.min.js"></script>
+        <script src="http://code.jquery.com/jquery.min.js"></script>
+        <link href="http://getbootstrap.com/dist/css/bootstrap.css" rel="stylesheet" type="text/css" />
+        <script src="http://getbootstrap.com/dist/js/bootstrap.js"></script>
+        
+        
+        
+	]]>
+  </Content>
+</Module>

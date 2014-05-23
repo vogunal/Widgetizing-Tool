@@ -1,0 +1,381 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<Module>
+  <ModulePrefs title="Contents"
+		description="A simple note taking widget developed during Dev8eD. No realtime synch involved yet."
+		author="Your Name"
+		author_email="Your Email"
+		height="300">
+  	<Require feature="opensocial-0.8" />
+    <Require feature="openapp" />
+    <OAuth>
+		<Service name="openapp" xmlns:openapp="http://www.role-project.eu/xml/openapp/opensocialext/" 
+			openapp:service="http://purl.org/role/terms/spaceService"
+			openapp:permitReadAppend="http://purl.org/role/terms/data">
+			<Request method="" url=""/>
+			<Authorization url=""/>
+			<Access method="" url=""/>
+		</Service>
+    </OAuth>
+  </ModulePrefs>
+  <Content type="html">
+    <![CDATA[
+		
+        <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>
+		<script src="http://dbis.rwth-aachen.de/gadgets/iwc/lib/iwc.js"></script>
+        <link href="css/bootstrap.css" rel="stylesheet">
+        
+		
+		<!-- JavaScript Block -->
+		<script>
+			
+			var space;
+			var user;
+			var iwcClient;
+            var editMode=new Boolean(0);
+            var parentFunction="";
+			
+			gadgets.util.registerOnLoadHandler(init);
+			
+			function init(){
+				console.log("Widget loaded");
+				
+				space = new openapp.oo.Resource(openapp.param.space());
+				user = new openapp.oo.Resource(openapp.param.user());
+				
+				space.getInfo(function(info) {
+					var spacename = info[openapp.ns.dcterms + "title"];
+					//document.getElementById("sname").innerHTML = spacename;
+				});
+				
+				user.getInfo(function(info) {
+					var username = info[openapp.ns.dcterms + "title"];
+					//document.getElementById("uname").innerHTML = username;
+				});
+				
+				iwcClient = new iwc.Client()
+				iwcClient.connect(iwcCallback);
+				
+				renderNotes();
+			}
+			
+			function iwcCallback(intent){
+				console.log("Template: Received intent");
+				console.log(intent);
+				
+				if (intent.action == "ACTION_UPDATE" && 
+					intent.extras.ns == "my:ns:note"){
+					window.location.reload();
+				}
+				
+				if (intent.action == "FUNCTION_MESSAGE") {
+					//if(intent.sender.indexOf("@") > -1){
+             document.getElementById("parentFunction").innerHTML=intent.extras.functionID;
+             parentFunction=intent.extras.functionID;
+             updateRender(intent.extras.functionID);
+             
+					//}
+				}
+			}
+			
+			function addContent(){
+             
+             if(parentFunction==""){
+             alert("Please select a parent function");
+             }
+             
+             else {
+                var contentNote = {"text":document.getElementById("variableList").value,
+                                   "parentWidget":$("#variableList option:selected").attr("parentWidget"),
+                                   "parentMicro":$("#variableList option:selected").attr("parentMicro"),
+                                   "parentFunction":parentFunction,
+                                   "contentType":$('input[name=contentType]:checked').val(),
+                                   "missionType":$('input[name=missionType]:checked').val()
+             };
+                
+                    space.create({
+                        relation: openapp.ns.role + "data",
+                        type: "my:ns:contentNote",
+                        representation: contentNote,
+                        callback: function(sub){
+                        publishResourceUpdate(sub.uri);
+                        window.location.reload();
+                            }
+                        });
+             }
+            }
+            
+			function sendMessage(){
+				var note = document.getElementById("message").value;
+				publishMessage(document.getElementById("message").value,"1234") ;
+			}
+            
+            
+            function renderNotes(){
+            
+                space.getSubResources({
+                
+                    relation: openapp.ns.role + "data",
+                    type: "my:ns:contentNote",
+                    onEach: function(contentNote) {
+                    contentNote.getRepresentation("rdfjson",function(r){
+                    
+                    
+                    var content = $("<button></button>").text(r.text);
+                    content.addClass('btn btn-link btn-sm');
+                    content.attr('id', r.text);
+                    content.on("click", function () {
+                      selectContent(r.text,r.contentType,r.parentFunction,r.missionType);
+                                   });
+                    content.attr('title', r.missionType);
+                    $("#contentList").append(content);
+                    
+                    
+                                });
+                            }
+                        });
+                        
+                        space.getSubResources({
+                        
+                        relation: openapp.ns.role + "data",
+                        type: "my:ns:variableNote",
+                        onEach: function(variableNote) {
+                        variableNote.getRepresentation("rdfjson",function(r){
+                        
+                        var w = document.getElementById("variableList");
+                        var option = document.createElement("option");
+                        option.text = r.parentWidget+":"+r.parentMicro+":"+r.text;
+                        option.value = r.text;
+                        option.id= r.text;
+                        //option.parentWidget=r.parentWidget;
+                        w.add(option);
+                        $('#'+r.text).attr('parentWidget', r.parentWidget);
+                        $('#'+r.text).attr('parentMicro', r.parentMicro);
+                        $('#'+r.text).attr('parentVariable', r.text);
+                        });
+                        }
+                        });
+
+                        
+                        
+			}
+             
+             function updateRender(functionID){
+             
+             $('#contentList').empty();
+             $('#variableList').empty();
+             space.getSubResources({
+                                   
+                                   relation: openapp.ns.role + "data",
+                                   type: "my:ns:contentNote",
+                                   onEach: function(contentNote) {
+                                   contentNote.getRepresentation("rdfjson",function(r){
+                                  
+                                  if(r.parentFunction==functionID){
+                                  
+                                  var content = $("<button></button>").text(r.text);
+                                  content.addClass('btn btn-link btn-sm');
+                                  content.attr('id', r.text);
+                                  content.on("click", function () {
+                                       selectContent(r.text,r.contentType,r.parentFunction,r.missionType);
+                                                                            });
+                                  content.attr('title', r.missionType);
+                                  $("#contentList").append(content);
+                                                                 }
+                                                                 
+                                      });
+                                     }
+                                   });
+             
+             space.getSubResources({
+                                   
+                                   relation: openapp.ns.role + "data",
+                                   type: "my:ns:variableNote",
+                                   onEach: function(variableNote) {
+                                   variableNote.getRepresentation("rdfjson",function(r){
+                                                                  
+                                                                  var w = document.getElementById("variableList");
+                                                                  var option = document.createElement("option");
+                                                                  option.text = r.parentWidget+":"+r.parentMicro+":"+r.text;
+                                                                  option.value = r.text;
+                                                                  option.id= r.text;
+                                                                  //option.parentWidget=r.parentWidget;
+                                                                  w.add(option);
+                                                                  $('#'+r.text).attr('parentWidget', r.parentWidget);
+                                                                  $('#'+r.text).attr('parentMicro', r.parentMicro);
+                                                                  $('#'+r.text).attr('parentVariable', r.text);
+                                                                  });
+                                   }
+                                   });
+             
+             
+             
+             }
+        
+			
+			function publishResourceUpdate(uri){
+				var intent = {		
+					"component": "",
+					"data":uri,
+					"dataType":"text/json",		
+					"action":"ACTION_UPDATE",
+					"flags" :["PUBLISH_GLOBAL"],
+					"extras" :{"ns":"my:ns:contentNote"}
+				};
+				iwcClient.publish(intent);
+			}
+			
+			function publishMessage(username,password){
+				var intent = {		
+					"component": "",
+					"data":"www.example.com",
+					"dataType":"text/json",		
+					"action":"ACTION_MESSAGE",
+					"flags" :["PUBLISH_GLOBAL"],
+					"extras" :{"username":username, "password":password}
+				};
+				iwcClient.publish(intent);
+			}
+             
+             function selectContent(contentID, contentType, parentFunction,missionType){
+             
+             //publishMessage(selectedMicroService,parentWidget);
+             
+             
+             //$('#note').val(eventID);
+             //$('#Grid/Table:last').removeClass("btn btn-default").addClass("btn btn-default active");
+             //$('#Form:last').removeClass("btn btn-default active").addClass("btn btn-default");
+             
+             if(contentType=="Collaborative"){
+             $("#Collaborative").attr('class', 'btn btn-default active');
+             $("#Local").attr('class', 'btn btn-default');
+             }
+             
+             else if(contentType=="Local"){
+             $("#Collaborative").attr('class', 'btn btn-default');
+             $("#Local").attr('class', 'btn btn-default active');
+             }
+             
+             
+             
+             if(missionType=="Retrieved"){
+             $("#Retrieved").attr('class', 'btn btn-default active');
+             $("#Changed").attr('class', 'btn btn-default');
+             }
+             
+             else if(missionType=="Changed"){
+             $("#Changed").attr('class', 'btn btn-default active');
+             $("#Retrieved").attr('class', 'btn btn-default');
+             }
+             
+             
+             
+             
+             $('#selectedContent').html(contentID);
+
+             if(editMode==false)
+             {
+             
+             $('#addButton').toggle(400);
+             $('#updateButton').toggle(400);
+             $('#removeButton').toggle(400);
+             $('#closeEdit').toggle(400);
+             $('#contentModeAdd').toggle(400);
+             $('#contentModeEdit').toggle(400);
+             $('#variableList').toggle(400);
+             $('#selectedContent').toggle(400);
+             
+             editMode=true;
+             }
+             }
+             
+
+             $(document).ready(function(){
+                               $("#closeEdit").click(function(){
+                                                     editMode=false;
+                                                     $('#addButton').toggle(400);
+                                                     $('#updateButton').toggle(400);
+                                                     $('#removeButton').toggle(400);
+                                                     $('#closeEdit').toggle(400);
+                                                     $('#variableList').toggle(400);
+                                                     $('#contentModeAdd').toggle(400);
+                                                     $('#contentModeEdit').toggle(400);
+                                                     $('#selectedContent').toggle(400);
+                                                     });
+                               });
+            
+		</script>
+		
+		<!-- HTML Block -->
+        
+        
+             <div align="center" style="height:25px;">
+             <div style="padding-top:5px;">
+             <span  class="label label-primary" id="parentFunction">All</span>
+             </div>
+             </div>
+        
+        <div id="" style="overflow:auto; height:100px;">
+        <div id="contentList"></div>
+        </div>
+   
+        <div align="center" style="background-color:#FEFFE6"class="alert alert-success">
+             <button id="closeEdit" style="display:none;" type="button" class="close btn-sm" aria-hidden="true">&times;</button>
+             <h4 id="contentModeAdd" style="color:#4B4D38;" align="center">Add</h4>
+             <h4 id="contentModeEdit" style="display:none; color:#4B4D38;" align="center">Update</h4>
+             
+            <div class="input-group">
+             
+             <span class="input-group-btn">
+             <button id="removeButton" style="display:none;" type="button" class="btn btn-link" onClick="removeContent()" title="Update Selected Function">
+             &zwnj;<span class="glyphicon glyphicon-trash"></span>
+             </button>
+             </span>
+             
+             <button id="selectedContent" style="display:none;" type="button" class="btn btn-link" title="Selected Content">Deneme
+             </button>
+
+            <select id="variableList" class="form-control" onchange="parentWidget=this.options[this.selectedIndex].getAttribute('parentWidget'));">
+            <option disabled selected>Variable</option>
+            </select>
+            <span class="input-group-btn">
+            <button id="addButton" type="button" class="btn btn-link" onClick="addContent()" title="Add Content">
+            &zwnj;<span class="glyphicon glyphicon-plus"></span>
+            </button>
+             
+             <button id="updateButton" style="display:none;" type="button" class="btn btn-link" onClick="updateContent()" title="Update Selected Function">
+             &zwnj;<span class="glyphicon glyphicon-refresh"></span>
+             </button>
+            </span>
+            </div>
+            
+            <div class="btn-group" data-toggle="buttons">
+            <label id="Collaborative" class="btn btn-default active">
+            <input type="radio" name="contentType" title="Collaborative" value="Collaborative" checked="checked">Collaborative
+            </label>
+            <label id="Local" class="btn btn-default">
+            <input type="radio" name="contentType" title="Local" value="Local">Local
+            </label>
+            </div>
+        
+             
+             <div class="btn-group" data-toggle="buttons">
+             <label id="Changed" class="btn btn-default active">
+             <input type="radio" name="missionType" title="" value="Changed" checked="checked">Changed
+             </label>
+             <label id="Retrieved" class="btn btn-default">
+             <input type="radio" name="missionType" title="" value="Retrieved">Retrieved
+             </label>
+             </div>
+        
+        </div>
+        
+        <script src="js/bootstrap.min.js"></script>
+        <script src="http://code.jquery.com/jquery.min.js"></script>
+        <link href="http://getbootstrap.com/dist/css/bootstrap.css" rel="stylesheet" type="text/css" />
+        <script src="http://getbootstrap.com/dist/js/bootstrap.js"></script>
+        
+        
+        
+	]]>
+  </Content>
+</Module>

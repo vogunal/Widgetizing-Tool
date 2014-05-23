@@ -1,0 +1,323 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<Module>
+  <ModulePrefs title="Functions"
+		description="A simple note taking widget developed during Dev8eD. No realtime synch involved yet."
+		author="Your Name"
+		author_email="Your Email"
+		height="300">
+  	<Require feature="opensocial-0.8" />
+    <Require feature="openapp" />
+    <OAuth>
+		<Service name="openapp" xmlns:openapp="http://www.role-project.eu/xml/openapp/opensocialext/" 
+			openapp:service="http://purl.org/role/terms/spaceService"
+			openapp:permitReadAppend="http://purl.org/role/terms/data">
+			<Request method="" url=""/>
+			<Authorization url=""/>
+			<Access method="" url=""/>
+		</Service>
+    </OAuth>
+  </ModulePrefs>
+  <Content type="html">
+    <![CDATA[
+		
+        <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>
+		<script src="http://dbis.rwth-aachen.de/gadgets/iwc/lib/iwc.js"></script>
+        <link href="css/bootstrap.css" rel="stylesheet">
+        
+		
+		<!-- JavaScript Block -->
+		<script>
+			
+			var space;
+			var user;
+            var iwcClient;
+            var editMode=new Boolean(0);
+			
+			gadgets.util.registerOnLoadHandler(init);
+			
+			function init(){
+				console.log("Widget loaded");
+				
+				space = new openapp.oo.Resource(openapp.param.space());
+				user = new openapp.oo.Resource(openapp.param.user());
+				
+				space.getInfo(function(info) {
+					var spacename = info[openapp.ns.dcterms + "title"];
+					document.getElementById("sname").innerHTML = spacename;
+				});
+				
+				user.getInfo(function(info) {
+					var username = info[openapp.ns.dcterms + "title"];
+					
+				});
+				
+				iwcClient = new iwc.Client()
+				iwcClient.connect(iwcCallback);
+				
+				renderNotes();
+			}
+			
+			function iwcCallback(intent){
+				console.log("Template: Received intent");
+				console.log(intent);
+				
+				if (intent.action == "ACTION_UPDATE" && 
+					intent.extras.ns == "my:ns:note"){
+					window.location.reload();
+				}
+				
+				if (intent.action == "ACTION_MESSAGE") {
+					if(intent.sender.indexOf("@") > -1){
+					alert ("I received this");
+					}
+				}
+			}
+			
+			function addFunction(){
+             
+                var calledFunctions = new Array();
+             
+                $("input:checkbox[name=callOption]:checked").each(function()
+                  {
+                      callOptions.push($(this).val());
+                });
+             
+                var functionNote = {"text":document.getElementById("note").value,
+                                    "calledFunctions":calledFunctions};
+             
+             //alert(callOptions.length);
+             
+                    space.create({
+                        relation: openapp.ns.role + "data",
+                        type: "my:ns:functionNote",
+                        representation: functionNote,
+                        callback: function(sub){
+                        publishResourceUpdate(sub.uri);
+                        window.location.reload();
+                            }
+                        });
+            }
+            
+            
+            $(document).ready(function(){
+            $("#closeEdit").click(function(){
+            editMode=false;
+            $('#addButton').toggle(400);
+            $('#updateButton').toggle(400);
+            $('#removeButton').toggle(400);
+            $('#closeEdit').toggle(400);
+            $('#note').val("");
+            $('#functionModeAdd').toggle(400);
+            $('#functionModeEdit').toggle(400);
+            });
+            });
+
+
+
+			function selectFunction(functionID,calledFunctions){
+             
+             publishMessage(functionID);
+             
+            /* $("input:checkbox[name=callOption]").each(function()
+                {
+                   $(this).prop('checked', false);
+                                                       
+                                                       });
+             
+             */
+             //$('input[name="callOption"]').attr('checked',false);
+             $('#note').val(functionID);
+             //alert(calledFunctions.length);
+             //alert(calledFunctions[0]+calledFunctions[1]+calledFunctions[2]);
+             
+             var boxes = $("input:checkbox[name=callOption]");
+             var valueCheck="";
+             //alert(boxes.length);
+             //alert(boxes[0].value+boxes[1].value+boxes[2].value);
+             
+             for(var i=0;i<calledFunctions.length;i++){
+             
+                    for(var j=0;j<boxes.length;j++){
+             
+                    valueCheck=boxes[j].value;
+                    if(boxes[j].value==calledFunctions[i]){
+             
+                    //alert(valueCheck);
+                    //$("input:checkbox[id=func3]").attr('checked', true);
+                    //$("[id="+valueCheck+"]").prop('checked', true);
+                    //$("#"+valueCheck).prop('checked', true);
+             
+                    $('input[name="callOption"][value="'+valueCheck+'"]').attr('checked','checked');
+                    //$('#'+valueCheck).attr('checked',true);
+                    //documentGetElementById(valueCheck).checked=true;
+             
+                    //$('#'+boxes[j].value).attr('checked', true);
+             
+             }
+             }
+             }
+            
+             
+            /* $("input:checkbox[name=callOption]").each(function()
+            {
+               //for(var i;i<calledFunctions.length;i++){
+                if(calledFunctions[i]==$(this).val()){
+                            alert(calledFunctions[i]+$(this).val());
+                            $(this).prop('checked', true);
+                   }
+                   //}
+                  
+            }); */
+             
+            
+             
+             //$('#Grid/Table:last').removeClass("btn btn-default").addClass("btn btn-default active");
+             //$('#Form:last').removeClass("btn btn-default active").addClass("btn btn-default");
+             
+             
+             if(editMode==false)
+                {
+                $('#addButton').toggle(400);
+                $('#updateButton').toggle(400);
+                $('#removeButton').toggle(400);
+                $('#closeEdit').toggle(400);
+                $('#functionModeAdd').toggle(400);
+                $('#functionModeEdit').toggle(400);
+             
+                editMode=true;
+                }
+                
+			}
+            
+            
+            function renderNotes(){
+                space.getSubResources({
+                
+                    relation: openapp.ns.role + "data",
+                    type: "my:ns:functionNote",
+                    onEach: function(functionNote) {
+                    functionNote.getRepresentation("rdfjson",function(r){
+                    
+                    var functionVar = $("<button></button>").text(r.text);
+                    functionVar.addClass('btn btn-primary btn-sm');
+                    functionVar.attr('id', r.text);
+                    functionVar.attr('title', r.text);
+                    functionVar.on("click", function () {
+                    selectFunction(r.text,r.calledFunctions); });
+                    $("#functionList").append(functionVar);
+                                                   
+ 
+                    var callList = $("<input> "+r.text+" </>").text(r.text);
+                    callList.attr('type', "checkbox");
+                    callList.attr('id',r.text);
+                    callList.attr('title', r.text);
+                    callList.attr('value', r.text);
+                    callList.attr('name', "callOption");
+                    //callList.on("click", function () {
+                    //selectFunction(r.text); });
+                    $("#callList").append(callList);
+                                });
+                            }
+                        });
+			}
+             
+             
+            
+			
+			function publishResourceUpdate(uri){
+				var intent = {		
+					"component": "",
+					"data":uri,
+					"dataType":"text/json",		
+					"action":"ACTION_UPDATE",
+					"flags" :["PUBLISH_GLOBAL"],
+					"extras" :{"ns":"my:ns:functionNote"}
+				};
+				iwcClient.publish(intent);
+			}
+			
+			function publishMessage(functionID){
+				var intent = {		
+					"component": "",
+					"data":"www.example.com",
+					"dataType":"text/json",		
+					"action":"FUNCTION_MESSAGE",
+					"flags" :["PUBLISH_GLOBAL"],
+					"extras" :{"functionID":functionID}
+				};
+				iwcClient.publish(intent);
+			}
+             
+             $(document).ready(function(){
+                               $("#callButton").click(function(){
+                                           $('#callList').toggle(400);
+                               
+                                               });
+                               });
+             
+            
+            
+		</script>
+		
+		<!-- HTML Block -->
+        
+        <div align="center" style="height:25px;">
+        <div style="padding-top:5px;">
+        <span style="background-color:#333;" class="label label-default" id="sname"></span>
+        </div>
+        </div>
+        
+        <div id="" style="overflow:auto; max-height:100px; height:100px;">
+        <div id="functionList"></div>
+        </div>
+   
+        <div align="center" class="alert alert-primary" style="background-color:#C4DAEE;">
+        
+        <button id="closeEdit" style="display:none;" type="button" class="close btn-sm" aria-hidden="true">&times;</button>
+        <h4 style="color:#428BCA;" id="functionModeAdd" align="center">Add</h4>
+        <h4 id="functionModeEdit" style="display:none; color:#428BCA;" align="center">Update</h4>
+        
+             <div class="input-group">
+             
+             <span class="input-group-btn">
+             <button id="removeButton" style="display:none;" type="button" class="btn btn-link" onClick="removeContent()" title="Remove Selected Function">
+             &zwnj;<span class="glyphicon glyphicon-trash"></span>
+             </button>
+             </span>
+             
+             <input type="text" id="note" class="form-control" placeholder="Function Name"/>
+             <span class="input-group-btn">
+             <button id="addButton" type="button" class="btn btn-primary" onClick="addFunction()" title="Add Function">
+             &zwnj;<span class="glyphicon glyphicon-plus"></span>
+             </button>
+             
+             <button id="updateButton" style="display:none;" type="button" class="btn btn-primary" onClick="updateMicroservice()" title="Update Selected Function">
+             &zwnj;<span class="glyphicon glyphicon-refresh"></span>
+             </button>
+             </span>
+             </div>
+             
+             
+             <button id="callButton" type="button" class="btn btn-primary">Calls
+             <span class="glyphicon glyphicon-chevron-down"></span>
+             </button>
+             
+             <div id="callList" class="alert alert-primary" style="overflow:auto; display:none; height:50px; max-height:50px; background-color:#D5E5F4;">
+             </div>
+             
+        </div>
+            
+        
+
+
+
+        <script src="js/bootstrap.min.js"></script>
+        <script src="http://code.jquery.com/jquery.min.js"></script>
+        <link href="http://getbootstrap.com/dist/css/bootstrap.css" rel="stylesheet" type="text/css" />
+        <script src="http://getbootstrap.com/dist/js/bootstrap.js"></script>
+        
+        
+        
+	]]>
+  </Content>
+</Module>
