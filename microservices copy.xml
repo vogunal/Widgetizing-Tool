@@ -1,0 +1,451 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<Module>
+  <ModulePrefs title="Micro-services"
+		description="A simple note taking widget developed during Dev8eD. No realtime synch involved yet."
+		author="Your Name"
+		author_email="Your Email"
+		height="300">
+  	<Require feature="opensocial-0.8" />
+    <Require feature="openapp" />
+    <OAuth>
+		<Service name="openapp" xmlns:openapp="http://www.role-project.eu/xml/openapp/opensocialext/" 
+			openapp:service="http://purl.org/role/terms/spaceService"
+			openapp:permitReadAppend="http://purl.org/role/terms/data">
+			<Request method="" url=""/>
+			<Authorization url=""/>
+			<Access method="" url=""/>
+		</Service>
+    </OAuth>
+  </ModulePrefs>
+  <Content type="html">
+    <![CDATA[
+		
+        <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>
+		<script src="http://dbis.rwth-aachen.de/gadgets/iwc/lib/iwc.js"></script>
+        <link href="css/bootstrap.css" rel="stylesheet">
+        
+        <style>
+             .blueText{ background-color:blue; }
+        </style>
+		
+		<!-- JavaScript Block -->
+		<script>
+			
+             var space;
+             var user;
+             var iwcClient;
+             var parentWidget="";
+             var editMode=new Boolean(0);
+             var selectedMicroID="";
+			
+			gadgets.util.registerOnLoadHandler(init);
+        
+			
+			function init(){
+				console.log("Widget loaded");
+				
+				space = new openapp.oo.Resource(openapp.param.space());
+				user = new openapp.oo.Resource(openapp.param.user());
+				
+				space.getInfo(function(info) {
+					var spacename = info[openapp.ns.dcterms + "title"];
+					
+				});
+				
+				user.getInfo(function(info) {
+					var username = info[openapp.ns.dcterms + "title"];
+					
+				});
+				
+				iwcClient = new iwc.Client()
+				iwcClient.connect(iwcCallback);
+				
+				renderNotes();
+			}
+			
+            
+			function iwcCallback(intent){
+				console.log("Template: Received intent");
+				console.log(intent);
+				
+				if (intent.action == "ACTION_UPDATE" && 
+					intent.extras.ns == "my:ns:note"){
+					window.location.reload();
+				}
+				
+				if (intent.action == "WIDGET_SELECT") {
+					//if(intent.sender.indexOf("@") > -1){
+					//alert (intent.extras.username + intent.extras.password);
+                    parentWidget=intent.extras.widgetID;
+                    document.getElementById("parentWidget").innerHTML=parentWidget;
+                    updateRender(parentWidget);
+                    closeEditMode();
+
+				//	}
+				}
+             
+                else if (intent.action == "WIDGET_CHANGE") {
+                //if(intent.sender.indexOf("@") > -1){
+                //alert (intent.extras.username + intent.extras.password);
+                    closeEditMode();
+             
+             //	}
+             }
+             
+			}
+			
+			function addMicroservice(){
+                var microNote = {"text":document.getElementById("note").value,
+                                 "parentWidget":parentWidget,
+                                 "microType":$('input[name=microType]:checked').val()};
+             
+                    space.create({
+                        relation: openapp.ns.role + "data",
+                        type: "my:ns:microNote",
+                        representation: microNote,
+                        callback: function(sub){
+                        publishResourceUpdate(sub.uri);
+                        window.location.reload();
+         
+                            }
+                        });
+             
+             
+             
+            }
+            
+
+             function updateMicroservice(){
+             
+             //edit microservice
+             var newRepresentation = {"text":document.getElementById("note").value,
+                                      "parentWidget":document.getElementById("widgetList").value,
+                                      "microType":$('input[name=microType]:checked').val()};
+             
+             space.getSubResources({
+                                   
+                                   relation: openapp.ns.role + "data",
+                                   type: "my:ns:microNote",
+                                   //callback: window.location.reload();,
+                                   onEach: function(microNote) {
+                                   microNote.getRepresentation("rdfjson",function(r){
+                                                               
+                                                               if(selectedMicroID==r.text){
+                                                               
+                                                               alert("Editing " +r.text);
+                                                               microNote.setRepresentation(newRepresentation);
+                                                               //microNote.del();
+                                                               
+                                                               }
+                                                               });
+                                   }
+                                   //window.location.reload();
+                                   
+                                   });
+             
+             //var resource = new openapp.oo.Resource("http://role-sandbox.eu/spaces/edittest/z1kgGqaQ1_");
+             
+             setTimeout(function () { window.location.reload(); }, 3500);
+             
+             
+             
+             
+             }
+            
+             function removeMicro(){
+             
+             //microService name to be deleted retrieved from text input
+             //that contains "text" property of microNote representation
+             var microName = document.getElementById("note").value;
+             
+             
+             space.getSubResources({
+                                   
+                                   relation: openapp.ns.role + "data",
+                                   type: "my:ns:microNote",
+                                   //callback: window.location.reload();,
+                                   onEach: function(microNote) {
+                                   microNote.getRepresentation("rdfjson",function(r){
+                            
+                                    if(microName==r.text){
+                                                
+                                                    alert("Deleting " +r.text);
+                                                    microNote.del();
+                                                               }
+                                                               });
+                                   }
+                                   //window.location.reload();
+                                   
+                                   });
+             
+             //var resource = new openapp.oo.Resource("http://role-sandbox.eu/spaces/edittest/z1kgGqaQ1_");
+             
+             setTimeout(function () { window.location.reload(); }, 1500);
+             }
+             
+             function reloadPage() {
+                    alert("Reloading page");
+                    window.location.reload();
+             }
+             
+             function closeEditMode {
+                        if(editMode==true){
+                        editMode=false;
+                        $('#addButton').toggle(400);
+                        $('#updateButton').toggle(400);
+                        $('#removeButton').toggle(400);
+                        $('#widgetList').toggle(400);
+                        $('#closeEdit').toggle(400);
+                        $('#note').val("");
+                        $('#microModeAdd').toggle(400);
+                        $('#microModeEdit').toggle(400);
+                                        }
+                               }
+             
+             function selectMicroservice(selectedMicroService, parentWidget, microType){
+             
+             publishMessage(selectedMicroService,parentWidget);
+             //updateRender(selectedMicroService);
+             updateWidgetList(parentWidget);
+             //alert(microService+" "+parentWidget);
+             
+             $('#note').val(selectedMicroService);
+             selectedMicroID=selectedMicroService;
+             //$('#Grid/Table:last').removeClass("btn btn-default").addClass("btn btn-default active");
+             //$('#Form:last').removeClass("btn btn-default active").addClass("btn btn-default");
+             
+             if(microType=="Form"){
+             $("#Form").attr('class', 'btn btn-default active');
+             $("#formRadio").attr('checked', 'checked');
+             $("#gridTable").attr('class', 'btn btn-default');
+             $("#Embed").attr('class', 'btn btn-default');
+             }
+             
+             else if(microType=="Grid/Table"){
+             $("#Form").attr('class', 'btn btn-default');
+             $("#gridTable").attr('class', 'btn btn-default active');
+             $("#gridRadio").attr('checked', 'checked');
+             $("#Embed").attr('class', 'btn btn-default');
+             }
+
+             else if(microType=="Embed"){
+                $("#Form").attr('class', 'btn btn-default');
+                $("#gridTable").attr('class', 'btn btn-default');
+                $("#Embed").attr('class', 'btn btn-default active');
+                $("#embedRadio").attr('checked', 'checked');
+             }
+             
+             if(editMode==false)
+                {
+             $('#widgetList').toggle(400);
+             $('#addButton').toggle(400);
+             $('#removeButton').toggle(400);
+             $('#updateButton').toggle(400);
+             $('#closeEdit').toggle(400);
+             $('#microModeAdd').toggle(400);
+             $('#microModeEdit').toggle(400);
+             
+             editMode=true;
+                }
+             }
+             
+            function renderNotes(){
+            
+             space.getSubResources({
+                                   
+                        relation: openapp.ns.role + "data",
+                        type: "my:ns:microNote",
+                        onEach: function(microNote) {
+                        microNote.getRepresentation("rdfjson",function(r){
+                                                               
+                                                               
+                        var microService = $("<button></button>").text(r.text);
+                        microService.addClass('btn btn-danger btn-sm');
+                        microService.attr('id', r.text);
+                        microService.attr('title', r.microType);
+                        microService.on("click", function () {
+                          selectMicroservice(r.text, r.parentWidget, r.microType);
+                                    });
+                        $("#microserviceList").append(microService);
+                                    });
+                                   }
+                                   });
+             
+             space.getSubResources({
+                                   
+                    relation: openapp.ns.role + "data",
+                    type: "my:ns:widgetNote",
+                    onEach: function(widgetNote) {
+                    widgetNote.getRepresentation("rdfjson",function(r){
+                                                                
+                        var widgetList = document.getElementById("widgetList");
+                        var option=document.createElement("option");
+                        
+                        if(r.text==parentWidget){
+                                option.selected="true";
+                                                }
+                        
+                        option.text = r.text;
+                        widgetList.add(option);
+                                   });
+                                   }
+                                   });
+
+			}
+			
+ 
+             function updateRender(selectedWidget){
+             
+             $('#microserviceList').empty();
+             space.getSubResources({
+                                   
+                            relation: openapp.ns.role + "data",
+                            type: "my:ns:microNote",
+                            onEach: function(microNote) {
+                            microNote.getRepresentation("rdfjson",function(r){
+                                                               
+                            if(selectedWidget == r.parentWidget) {
+                            
+                            var microService = $("<button></button>").text(r.text);
+                              microService.addClass('btn btn-danger btn-sm');
+                              microService.attr('id', r.text);
+                              microService.attr('title', r.microType);
+                              microService.on("click", function () {
+                              selectMicroservice(r.text, r.parentWidget,r.microType);
+                              });
+                            
+                                                        
+                              $("#microserviceList").append(microService);
+                                                        }
+                                                        
+                            });
+                            }
+                            });
+             
+             }
+             
+             function updateWidgetList(parentWidget){
+             
+             $('#widgetList').empty();
+             var parentlessOption=document.createElement("option");
+             parentlessOption.text="No Parent";
+             parentlessOption.selected="true";
+             widgetList.add(parentlessOption);
+             
+             space.getSubResources({
+                                   
+                                   relation: openapp.ns.role + "data",
+                                   type: "my:ns:widgetNote",
+                                   onEach: function(widgetNote) {
+                                   widgetNote.getRepresentation("rdfjson",function(r){
+                                                                
+                                                                var widgetList = document.getElementById("widgetList");
+                                                                var option=document.createElement("option");
+                                                                
+                                                                if(r.text==parentWidget){
+                                                                option.selected="true";
+                                                                }
+                                                            
+                                                                option.text = r.text;
+                                                                widgetList.add(option);
+                                                                });
+                                   }
+                                   });
+             }
+             
+			
+			function publishResourceUpdate(uri){
+				var intent = {		
+					"component": "",
+					"data":uri,
+					"dataType":"text/json",		
+					"action":"ACTION_UPDATE",
+					"flags" :["PUBLISH_GLOBAL"],
+					"extras" :{"ns":"my:ns:microNote"}
+				};
+				iwcClient.publish(intent);
+			}
+			
+			function publishMessage(microID,parentWidget){
+				var intent = {
+					"component": "",
+					"data":"www.example.com",
+					"dataType":"text/json",		
+					"action":"ACTION_MICRO",
+					"flags" :["PUBLISH_GLOBAL"],
+					"extras" :{"microID":microID, "widgetID":parentWidget, "parentWidget":parentWidget}
+				};
+				iwcClient.publish(intent);
+			}
+            
+		</script>
+		
+		<!-- HTML Block -->
+        
+        
+             <div align="center" style="height:25px;">
+             <div style="padding-top:5px;">
+             <span  class="label label-default" id="parentWidget">All</span>
+             </div>
+             </div>
+        
+        
+        <div id="" style="overflow:auto; max-height:100px; height:100px;">
+        <div id="microserviceList"></div>
+        </div>
+   
+
+        <div align="center" class="alert alert-danger">
+        <button id="closeEdit" style="display:none;" type="button" class="close btn-sm" onclick="closeEditMode();" aria-hidden="true">&times;</button>
+        <h4 id="microModeAdd" align="center">Add</h4>
+        <h4 id="microModeEdit" style="display:none;" align="center">Update</h4>
+
+        <div class="input-group">
+             
+        <span class="input-group-btn">
+        <button id="removeButton" style="display:none;" type="button" class="btn btn-link" onClick="removeMicro();" title="Delete">
+             &zwnj;<span class="glyphicon glyphicon-trash"></span>
+        </button>
+        </span>
+        
+        <input type="text" id="note" class="form-control" placeholder="Micro-service ID"/>
+        <span class="input-group-btn">
+        <button id="addButton" type="button" class="btn btn-danger" onClick="addMicroservice()" title="Add Micro-service">
+        &zwnj;<span class="glyphicon glyphicon-plus"></span>
+        </button>
+             
+        <button id="updateButton" style="display:none;" type="button" class="btn btn-danger" onClick="updateMicroservice()" title="Update">
+        &zwnj;<span class="glyphicon glyphicon-refresh"></span>
+        </button>
+        </span>
+        </div>
+             
+        <select id="widgetList" style="display:none;" class="form-control input-sm">
+        <option disabled selected>Select Parent</option>
+        </select>
+        
+            <div align="center" class="btn-group" data-toggle="buttons">
+            <label id="Form" class="btn btn-default active">
+            <input id="formRadio" type="radio" name="microType" value="Form" checked="checked">Form
+            </label>
+            <label id="gridTable" class="btn btn-default">
+            <input id="gridRadio" type="radio" name="microType" title="Grid/Table" value="Grid/Table">Grid/Table
+            </label>
+            <label id="Embed" class="btn btn-default">
+            <input id="embedRadio" type="radio" name="microType" title="Embed" value="Embed" >Embed
+            </label>
+            </div>
+
+         </div>
+           
+        
+        <script src="js/bootstrap.min.js"></script>
+        <script src="http://code.jquery.com/jquery.min.js"></script>
+        <link href="http://getbootstrap.com/dist/css/bootstrap.css" rel="stylesheet" type="text/css" />
+        <script src="http://getbootstrap.com/dist/js/bootstrap.js"></script>
+        
+        
+        
+	]]>
+  </Content>
+</Module>

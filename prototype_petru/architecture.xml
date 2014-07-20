@@ -1,0 +1,576 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<Module>
+  <ModulePrefs title="Architecture"
+		description="A simple note taking widget developed during Dev8eD. No realtime synch involved yet."
+		author="Your Name"
+		author_email="Your Email"
+		height="300">
+  	<Require feature="opensocial-0.8" />
+    <Require feature="openapp" />
+    <OAuth>
+		<Service name="openapp" xmlns:openapp="http://www.role-project.eu/xml/openapp/opensocialext/" 
+			openapp:service="http://purl.org/role/terms/spaceService"
+			openapp:permitReadAppend="http://purl.org/role/terms/data">
+			<Request method="" url=""/>
+			<Authorization url=""/>
+			<Access method="" url=""/>
+		</Service>
+    </OAuth>
+  </ModulePrefs>
+  <Content type="html">
+    <![CDATA[
+		
+        <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>
+		<script src="http://dbis.rwth-aachen.de/gadgets/iwc/lib/iwc.js"></script>
+        <link href="css/bootstrap.css" rel="stylesheet">
+        
+		
+		<!-- JavaScript Block -->
+		<script>
+			
+            var space;
+            var user;
+            var iwcClient;
+            var parentTrigger="";
+            var parentMicro="";
+            var parentWidget="";
+            var editMode=new Boolean(0);
+            var widgetArray = new Array();
+            var microArray = {tuple: []};
+            var eventArray = {tuple: []};
+            var functionArray = {tuple: []};
+            var contentArray = {tuple: []};
+            var retrievedContentArray = {tuple: []};
+            var destinationContentArray = {tuple: []};
+            var eventIndex=1;
+			
+			gadgets.util.registerOnLoadHandler(init);
+			
+			function init(){
+				console.log("Widget loaded");
+				
+				space = new openapp.oo.Resource(openapp.param.space());
+				user = new openapp.oo.Resource(openapp.param.user());
+				
+				space.getInfo(function(info) {
+					var spacename = info[openapp.ns.dcterms + "title"];
+					
+				});
+				
+				user.getInfo(function(info) {
+					var username = info[openapp.ns.dcterms + "title"];
+					
+				});
+				
+				iwcClient = new iwc.Client()
+				iwcClient.connect(iwcCallback);
+             
+                renderNotes();
+                drawCanvas();
+				
+			}
+			
+			function iwcCallback(intent){
+				console.log("Template: Received intent");
+				console.log(intent);
+				
+				if (intent.action == "ACTION_UPDATE" && 
+					intent.extras.ns == "my:ns:note"){
+					window.location.reload();
+				}
+				
+
+             if (intent.action == "WIDGET_ADD"){
+             
+             widgetArray = new Array();
+             microArray = {tuple: []};
+             eventArray = {tuple: []};
+             functionArray = {tuple: []};
+             contentArray = {tuple: []};
+             retrievedContentArray = {tuple: []};
+             destinationContentArray = {tuple: []};
+             
+             document.getElementById("myCanvas").width = document.getElementById("myCanvas").width;
+             renderNotes();
+             drawCanvas();
+             }
+             
+             if (intent.action == "WIDGET_REMOVE"){
+             
+             widgetArray = new Array();
+             microArray = {tuple: []};
+             eventArray = {tuple: []};
+             functionArray = {tuple: []};
+             contentArray = {tuple: []};
+             retrievedContentArray = {tuple: []};
+             destinationContentArray = {tuple: []};
+             
+             document.getElementById("myCanvas").width = document.getElementById("myCanvas").width;
+             renderNotes();
+             drawCanvas();
+             }
+					
+
+                  //  document.getElementById("parentTrigger").innerHTML=parentTrigger;
+                  //  document.getElementById("parentMicro").innerHTML=parentMicro;
+             
+					//}
+             
+				
+			}
+			
+			function addEvent(){
+                var eventNote = {"text":document.getElementById("note").value,
+                                 "parentTrigger":parentTrigger,
+                                 "parentMicro":parentMicro,
+                                 "parentWidget":parentWidget,
+                                 "conditionClause":document.getElementById("conditionList").value,
+                                 "eventFunction":document.getElementById("functionList").value
+             };
+                
+                    space.create({
+                        relation: openapp.ns.role + "data",
+                        type: "my:ns:eventNote",
+                        representation: eventNote,
+                        callback: function(sub){
+                        publishResourceUpdate(sub.uri);
+                        window.location.reload();
+                            }
+                        });
+            }
+            
+            function renderNotes(){
+            
+                space = new openapp.oo.Resource(openapp.param.space());
+             
+             
+             
+             
+             space.getSubResources({
+                                   
+                                   relation: openapp.ns.role + "data",
+                                   type: "my:ns:microNote",
+                                   onEach: function(microNote) {
+                                   microNote.getRepresentation("rdfjson",function(r){
+                                                               
+                                        microArray.tuple.push({"microID" : r.text,"parentWidget"  : r.parentWidget});
+                                                               
+                                                               });
+                                   }
+                                   });
+             
+             space.getSubResources({
+                                   
+                                   relation: openapp.ns.role + "data",
+                                   type: "my:ns:eventNote",
+                                   onEach: function(eventNote) {
+                                   eventNote.getRepresentation("rdfjson",function(r){
+                                    
+                                   eventArray.tuple.push({"eventIndex":eventIndex, "eventID" : r.text,"parentWidget":r.parentWidget, "parentTrigger":r.parentTrigger, "eventFunction":r.eventFunction});
+                                   eventIndex++;
+                                                               
+                                                               });
+                                   }
+                                   });
+             
+             space.getSubResources({
+                                   
+                                   relation: openapp.ns.role + "data",
+                                   type: "my:ns:functionNote",
+                                   onEach: function(functionNote) {
+                                   functionNote.getRepresentation("rdfjson",function(r){
+                                                               
+                                                               functionArray.tuple.push({"functionID" : r.text,"calledFunctions":r.calledFunctions});
+                                                               
+                                                               });
+                                   }
+                                   });
+             
+             
+             space.getSubResources({
+                                   
+                                   relation: openapp.ns.role + "data",
+                                   type: "my:ns:contentNote",
+                                   onEach: function(contentNote) {
+                                   contentNote.getRepresentation("rdfjson",function(r){
+                                                                 
+                                                                 if(r.missionType=="Retrieved"){
+                                                                 retrievedContentArray.tuple.push({"contentID" : r.text,
+                                                                                         "parentWidget":r.parentWidget,
+                                                                                         "parentMicro":r.parentMicro,
+                                                                                         "contentType":r.contentType,
+                                                                                         "parentFunction":r.parentFunction,
+                                                                                         "missionType":r.missionType});
+                                                                 
+                                                                                                }
+                                                                 
+                                                                 
+                                                                 else if(r.missionType=="Changed"){
+                                                                 destinationContentArray.tuple.push({"contentID":r.text,
+                                                                                         "parentWidget":r.parentWidget,
+                                                                                         "parentMicro":r.parentMicro,
+                                                                                         "contentType":r.contentType,
+                                                                                         "parentFunction":r.parentFunction,
+                                                                                         "missionType":r.missionType});
+                                                                 
+                                                                 }
+                                                                 
+                                                                 
+                                                                 
+                                                                 
+                                                                  });
+                                   }
+                                   });
+             
+             
+			}
+			
+			function publishResourceUpdate(uri){
+				var intent = {		
+					"component": "",
+					"data":uri,
+					"dataType":"text/json",		
+					"action":"ACTION_UPDATE",
+					"flags" :["PUBLISH_GLOBAL"],
+					"extras" :{"ns":"my:ns:eventNote"}
+				};
+				iwcClient.publish(intent);
+			}
+             
+            function drawCanvas(){
+             
+             
+             var c=document.getElementById("myCanvas");
+             var ctx=c.getContext("2d");
+             var counter=0;
+             var xStart=5;
+             var yStart=5;
+             
+             space = new openapp.oo.Resource(openapp.param.space());
+             space.getSubResources({
+                                   
+                                   relation: openapp.ns.role + "data",
+                                   type: "my:ns:widgetNote",
+                                   onEach: function(widgetNote) {
+                                   widgetNote.getRepresentation("rdfjson",function(r){
+                                                                
+                                   
+                                   if(counter==4){
+                                                                
+                                        xStart=5;
+                                        yStart=130;
+                                                                
+                                        }
+                                    
+                                   widgetArray.push(r.text);
+                                                                ctx.beginPath();
+                                                                ctx.lineWidth="1";
+                                                                ctx.strokeStyle="black";
+                                                                ctx.rect(xStart,yStart,125,100);
+                                                                ctx.stroke();
+                                                                
+                                                                ctx.beginPath();
+                                                                ctx.moveTo(xStart,yStart+20);
+                                                                ctx.lineTo(xStart+125,yStart+20);
+                                                                ctx.stroke();
+                                                                
+                                                               /* ctx.beginPath();
+                                                                ctx.moveTo(4,124);
+                                                                ctx.lineTo(996,124);
+                                                                ctx.strokeStyle="#BDBDBD";
+                                                                ctx.stroke(); */
+                                                                
+                                                                ctx.font = "bold 11px Arial";
+                                                                ctx.fillText(r.text,xStart+5,yStart+15);
+                                                                
+                                                                
+                                                                xStart=xStart+140;
+                                                                counter++;
+                       
+                                   });
+                                   }
+                                   });
+             
+             }
+             
+             
+             
+             function drawMicro(){
+             
+             //alert("Widgets Loaded:"+widgetArray.length);
+             //alert("Micro Loaded:"+microArray.tuple.length);
+             //alert("Check Second:"+widgetArray[1]);
+             var c=document.getElementById("myCanvas");
+             var ctx=c.getContext("2d");
+             var counter=0;
+             var xStart=5;
+             var yStart=38;
+             
+             for (var i=0;i<widgetArray.length;i++){
+             
+             indexValue = widgetArray[i];
+             //alert("Widget in Line:"+indexValue);
+             if(i==4){
+             
+             xStart=5;
+             yStart=163;
+             
+             }
+             
+                                 for (var j=0;j<microArray.tuple.length;j++){
+             
+                                            if(microArray.tuple[j].parentWidget==indexValue)
+                                                         {
+                                                               
+                                                               //alert(microArray.tuple[j].parentWidget+" "+indexValue);
+                                                                //widgetArray.push(r.text);
+             
+             
+                                                                ctx.font = "bold 11px Arial";
+                                                                ctx.fillStyle="#d9534f";
+                                                                ctx.fillText(microArray.tuple[j].microID,xStart+5,yStart);
+  
+                                                                yStart=yStart+12;
+                                                                counter++;
+             
+                                                                }
+             
+                                                            }
+             
+                                                                if(i>3){
+             
+                                                                yStart=163;
+             
+                                                                    }
+                                                                else{
+                                                                   yStart=38;
+                                                                    }
+                                                                //alert(widgetArray.length);
+             
+                                                                xStart=xStart+140;
+             
+             }
+             }
+             
+             
+             function drawEvents(){
+             
+             //alert("Widgets Loaded:"+widgetArray.length);
+             //alert("Events Loaded:"+eventArray.tuple.length);
+             //alert("Check Second:"+widgetArray[1]);
+             var c=document.getElementById("myCanvas");
+             var ctx=c.getContext("2d");
+             var counter=0;
+             var xStart=5;
+             var yStart=117;
+             var eventIndex=1;
+             var innerX=4;
+             var innerY=10;
+             var outerX=4;
+             var outerY=140;
+             
+             for (var i=0;i<widgetArray.length;i++){
+             
+             indexValue = widgetArray[i];
+             //alert("Widget in Line:"+indexValue);
+             
+             
+             for (var j=0;j<eventArray.tuple.length;j++){
+             
+             if(eventArray.tuple[j].parentWidget==indexValue)
+             {
+             
+             //alert(microArray.tuple[j].parentWidget+" "+indexValue);
+             //widgetArray.push(r.text);
+             ctx.fillStyle="#000000";
+             ctx.fillRect(xStart+innerX,yStart-innerY,15,12);
+             ctx.font = "bold 11px Arial";
+             ctx.fillStyle="#FF8000";
+             ctx.fillText("e"+eventArray.tuple[j].eventIndex,xStart+innerX+1,yStart);
+             
+             //description panel
+             ctx.fillStyle="#000000";
+             ctx.fillRect(outerX,outerY-11,outerX+10,12);
+             ctx.font = "bold 11px Arial";
+             ctx.fillStyle="#FF8000";
+             ctx.fillText("e"+eventArray.tuple[j].eventIndex,outerX+1,outerY);
+             ctx.fillStyle="#000000";
+             ctx.fillText(" "+eventArray.tuple[j].parentTrigger+" triggers "+eventArray.tuple[j].eventFunction,outerX+15,outerY);
+             
+             innerX=innerX+20;
+             eventIndex++;
+             outerY=outerY+14;
+             
+             }
+             
+             }
+             
+             //alert(widgetArray.length);
+             innerX=4;
+             yStart=117;
+             xStart=xStart+140;
+
+             }
+             /*
+              ctx.beginPath();
+              ctx.moveTo(20,20);
+              ctx.bezierCurveTo(20,100,200,100,200,20);
+              ctx.stroke();
+              */
+             
+             }
+             
+             function drawContents(){
+             
+             //alert("Widgets Loaded:"+widgetArray.length);
+             alert("Changed:"+destinationContentArray.tuple.length);
+             alert("Retrieved:"+retrievedContentArray.tuple.length);
+             
+             //alert("Check Second:"+widgetArray[1]);
+             var c=document.getElementById("myCanvas");
+             var ctx=c.getContext("2d");
+             var counter=0;
+             var xStart=5;
+             var yStart=200;
+             
+             
+             for (var i=0;i<widgetArray.length;i++){
+             
+             indexValue = widgetArray[i];
+             //alert("Widget in Line:"+indexValue);
+             alert(destinationContentArray.tuple[0].parentWidget+" "+destinationContentArray.tuple[0].missionType+" "+destinationContentArray.tuple[0].contentID);
+             
+             for (var j=0;j<destinationContentArray.tuple.length;j++){
+             
+             if(destinationContentArray.tuple[j].parentWidget==indexValue)
+             {
+             
+             alert(destinationContentArray.tuple[j].missionType+" "+destinationContentArray.tuple[j].contentID);
+             //widgetArray.push(r.text);
+             
+             ctx.font = "11px Arial";
+             ctx.fillStyle="#0404B4";
+             ctx.fillText(destinationContentArray.tuple[j].contentID+" is "+destinationContentArray.tuple[j].missionType+" by "+destinationContentArray.tuple[j].parentFunction+" function",xStart+5,yStart);
+             
+             yStart=yStart+12;
+             counter++;
+             
+             }
+             
+             }
+             
+             //alert(widgetArray.length);
+             yStart=200;
+             xStart=xStart+100;
+             }
+             
+             for (var i=0;i<widgetArray.length;i++){
+             
+             indexValue = widgetArray[i];
+             //alert("Widget in Line:"+indexValue);
+             yStart=125;
+             xStart=5;
+             
+             for (var j=0;j<retrievedContentArray.tuple.length;j++){
+             
+             //alert(retrievedContentArray.tuple[j].missionType+retrievedContentArray.tuple[j].contentID+"Parent Widget:"+retrievedContentArray.tuple[j].parentWidget+"Widget:"+indexValue);
+             if(retrievedContentArray.tuple[j].parentWidget==indexValue)
+             {
+             
+             //alert(microArray.tuple[j].parentWidget+" "+indexValue);
+             //widgetArray.push(r.text);
+            
+             ctx.font = "11px Arial";
+             ctx.fillStyle="#0404B4";
+             ctx.fillText(retrievedContentArray.tuple[j].contentID+" is "+retrievedContentArray.tuple[j].missionType+" by "+retrievedContentArray.tuple[j].parentFunction,xStart+5,yStart);
+             
+             yStart=yStart+12;
+             counter++;
+             
+             }
+             
+             }
+             
+             //alert(widgetArray.length);
+             yStart=125;
+             xStart=xStart+100;
+             
+             }
+ 
+             /*
+              ctx.beginPath();
+              ctx.moveTo(20,20);
+              ctx.bezierCurveTo(20,100,200,100,200,20);
+              ctx.stroke();
+              */
+             
+             }
+      
+		</script>
+		
+		<!-- HTML Block -->
+        
+        
+        <canvas id="myCanvas" width="560" height="250">
+             Your browser does not support the HTML5 canvas tag.
+             </canvas>
+             
+        <button id="drawMicro"  type="button" class="btn btn-danger" onClick="drawMicro()" title="Update">Show Micro-services</button>
+        <button id="drawEvent"  type="button" class="btn btn-warning" onClick="drawEvents()" title="Events">Show Events</button>
+        <button id="drawEvent"  type="button" class="btn btn-link" onClick="drawContents()" title="Events">Show Contents</button>
+             
+        
+        <div id="" style="overflow:auto; max-height:100px; height:100px;">
+        <ol id="eventList"></ol>
+        </div>
+        
+        <div align="center" class="alert alert-info">
+             
+        <button id="closeEdit" style="display:none;" type="button" class="close btn-sm" aria-hidden="true">&times;</button>
+             <h4 id="eventModeAdd" align="center">Add</h4>
+             <h4 id="eventModeEdit" style="display:none;" align="center">Update</h4>
+             
+            <div class="input-group">
+            <input type="text" id="note" class="form-control" placeholder="Event Name"/>
+            <span class="input-group-btn">
+            <button id="addButton" type="button" class="btn btn-info" onClick="addEvent()" title="Add Event">
+            +
+            </button>
+             
+             <button id="updateButton" style="display:none;" type="button" class="btn btn-info" onClick="updateEvent()" title="Update">
+             &#8634;
+             </button>
+            </span>
+            </div>
+        
+             <select id="triggerList" style="display:none;" class="form-control input-sm">
+             </select>
+             
+            <span>
+            <select id="conditionList" class="form-control input-sm">
+            <option disabled selected>Condition Clause</option>
+            <option value="onclick">onclick</option>
+            <option value="onsubmit">onsubmit</option>
+            <option value=".click()">.click()</option>
+            <option value="onchange">onchange</option>
+            <option value="onfocus">onfocus</option>
+            </select>
+            </span>
+            
+            
+            <select id="functionList" class="form-control input-sm">
+            <option disabled selected>Function</option>
+            </select>
+          
+            </div>
+
+        <script src="js/bootstrap.min.js"></script>
+        <script src="http://code.jquery.com/jquery.min.js"></script>
+        <link href="http://getbootstrap.com/dist/css/bootstrap.css" rel="stylesheet" type="text/css" />
+        <script src="http://getbootstrap.com/dist/js/bootstrap.js"></script>
+        
+        
+        
+	]]>
+  </Content>
+</Module>

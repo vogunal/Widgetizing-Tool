@@ -28,11 +28,12 @@
 		<!-- JavaScript Block -->
 		<script>
 			
-			var space;
-			var user;
-			var iwcClient;
+            var space;
+            var user;
+            var iwcClient;
             var editMode=new Boolean(0);
             var parentFunction="";
+            var selectedContentID="";
 			
 			gadgets.util.registerOnLoadHandler(init);
 			
@@ -67,23 +68,72 @@
 					window.location.reload();
 				}
 				
-				if (intent.action == "FUNCTION_MESSAGE") {
+				if (intent.action == "FUNCTION_SELECT") {
 					//if(intent.sender.indexOf("@") > -1){
              document.getElementById("parentFunction").innerHTML=intent.extras.functionID;
              parentFunction=intent.extras.functionID;
              updateRender(intent.extras.functionID);
+             //$("#statusMessage").html('Add contents to '+intent.extras.functionID+' function');
+             //$("#statusMessage").fadeIn();
+             closeEditMode();
              
 					//}
 				}
+             
+             if (intent.action == "FUNCTION_ADD") {
+             //if(intent.sender.indexOf("@") > -1){
+             document.getElementById("parentFunction").innerHTML=intent.extras.functionID;
+             parentFunction=intent.extras.functionID;
+             $("#statusMessage").html('Add variable content to '+parentFunction);
+             $("#statusMessage").fadeIn();
+             updateRender(intent.extras.functionID);
+             closeEditMode();
+             
+             //}
+             }
+             
+             
+             if (intent.action == "FUNCTION_REMOVE") {
+             //if(intent.sender.indexOf("@") > -1){
+             document.getElementById("parentFunction").innerHTML="All";
+             parentFunction="";
+             renderNotes();
+             closeEditMode();
+             
+             //}
+             }
+             
+             if (intent.action == "FUNCTION_CHANGE") {
+             //if(intent.sender.indexOf("@") > -1){
+             //alert(intent.extras.changedFunction+" "+intent.extras.changedTo);
+             document.getElementById("parentFunction").innerHTML=intent.extras.changedTo;
+             parentFunction=intent.extras.changedTo;
+             updateParentFunction(intent.extras.changedFunction, intent.extras.changedTo);
+             closeEditMode();
+             
+             //}
+             }
+
+             
 			}
 			
 			function addContent(){
              
              if(parentFunction==""){
-             alert("Please select a parent function");
+             $("#statusMessage").html('Select a parent function');
+             $("#statusMessage").fadeIn();
+             $("#statusMessage").fadeOut(3000);
+             }
+             
+             if(document.getElementById("variableList").value==""){
+             $("#statusMessage").html('Select a variable content');
+             $("#statusMessage").fadeIn();
+             $("#statusMessage").fadeOut(3000);
              }
              
              else {
+             
+             publishAddMessage();
                 var contentNote = {"text":document.getElementById("variableList").value,
                                    "parentWidget":$("#variableList option:selected").attr("parentWidget"),
                                    "parentMicro":$("#variableList option:selected").attr("parentMicro"),
@@ -91,31 +141,133 @@
                                    "contentType":$('input[name=contentType]:checked').val(),
                                    "missionType":$('input[name=missionType]:checked').val()
              };
-                
+             
+             $("#statusMessage").html(document.getElementById("variableList").value+' is added');
+             $("#statusMessage").fadeIn();
+             
                     space.create({
                         relation: openapp.ns.role + "data",
                         type: "my:ns:contentNote",
                         representation: contentNote,
                         callback: function(sub){
                         publishResourceUpdate(sub.uri);
-                        window.location.reload();
+                        if(sub.uri!=null){
+                                 updateRender(parentFunction);
+                                 }
                             }
                         });
              }
             }
             
-			function sendMessage(){
-				var note = document.getElementById("message").value;
-				publishMessage(document.getElementById("message").value,"1234") ;
-			}
+             function updateContent(){
+             
+             //alert($("#microserviceList option:selected").attr("parentWidget")+" "+$("#microserviceList option:selected").attr("parentMicro"));
+             
+             //edit microservice
+             
+             publishChangeMessage();
+             space.getSubResources({
+                                   
+                                   relation: openapp.ns.role + "data",
+                                   type: "my:ns:contentNote",
+                                   onEach: function(contentNote) {
+                                   contentNote.getRepresentation("rdfjson",function(r){
+                                                               
+                                            if(selectedContentID==r.text){
+                                                   
+                            var newRepresentation = {"text":selectedContentID,
+                                                    "parentWidget":r.parentWidget,
+                                                    "parentMicro":r.parentMicro,
+                                                    "parentFunction":r.parentFunction,
+                                                    "contentType":$('input[name=contentType]:checked').val(),
+                                                    "missionType":$('input[name=missionType]:checked').val()
+                                                                 };
+                                                               
+                            contentNote.setRepresentation(newRepresentation);
+                                                                 
+                             $("#statusMessage").html(selectedContentID+' is updated');
+                             $("#statusMessage").fadeIn();
+                                                    
+                                                    if(parentFunction!=""){
+                                                    updateRender(r.parentFunction);
+                                                                 }
+                                                                 
+                                                    else{
+                                                    renderNotes();
+                                                                 }
+                                                    closeEditMode();
+                                                               
+                                                               }
+                                                               });
+                                   }
+                                   
+                                   
+                                   
+                                   
+                                   
+                
+                                   });
+             
+             
+             }
+             
+             
+             
+             function removeContent(){
+             publishRemoveMessage();
+             space.getSubResources({
+                                   
+                                   relation: openapp.ns.role + "data",
+                                   type: "my:ns:contentNote",
+                                   //callback: window.location.reload();,
+                                   onEach: function(contentNote) {
+                                   contentNote.getRepresentation("rdfjson",function(r){
+                                                               
+                                                               if(selectedContentID==r.text){
+                                                               
+                                                               //alert("Deleting " +r.text);
+                                                               contentNote.del();
+                                                                $("#statusMessage").html(selectedContentID+' is removed');
+                                                                $("#statusMessage").fadeIn();
+                                                                 if(parentFunction!=""){
+                                                                 updateRender(r.parentFunction);
+                                                                 }
+                                                                 
+                                                                 else{
+                                                                 renderNotes();
+                                                                 }
+         
+                                                               closeEditMode();
+                                                               }
+                                                               });
+                                   }
+                                   //window.location.reload();
+                                   
+                                   });
+             }
+             
             
             
             function renderNotes(){
             
+             $('#contentList').empty();
+             $('#variableList').empty();
+             
+             $('#variableList').append('<option value="" selected="selected" disabled>Variable/Trigger Contents</option>');
+             
+             $('#contentList').append('<img src="http://dl.dropboxusercontent.com/u/48194107/Widgetizing/loadingcontent.gif">');
+             $('#contentList').append('<p class="text-muted">Loading Contents...</p>');
+                space = new openapp.oo.Resource(openapp.param.space());
                 space.getSubResources({
                 
                     relation: openapp.ns.role + "data",
                     type: "my:ns:contentNote",
+                    onAll: function(data) {
+                                      if(data === null || data.length === 0){
+                                      $("#contentList > img").remove();
+                                      $("#contentList > p").remove();
+                                      $('#contentList').append('<p class="text-muted">No contents assigned</p>');
+                                      }},
                     onEach: function(contentNote) {
                     contentNote.getRepresentation("rdfjson",function(r){
                     
@@ -128,7 +280,8 @@
                                    });
                     content.attr('title', r.missionType);
                     $("#contentList").append(content);
-                    
+                    $("#contentList > img").remove();
+                    $("#contentList > p").remove();
                     
                                 });
                             }
@@ -143,7 +296,7 @@
                         
                         var w = document.getElementById("variableList");
                         var option = document.createElement("option");
-                        option.text = r.parentWidget+":"+r.parentMicro+":"+r.text;
+                        option.text = r.parentWidget+": "+r.parentMicro+": "+r.text;
                         option.value = r.text;
                         option.id= r.text;
                         //option.parentWidget=r.parentWidget;
@@ -159,19 +312,73 @@
                         
 			}
              
-             function updateRender(functionID){
+             function updateParentFunction(changedFunction,changedTo){
              
-             $('#contentList').empty();
-             $('#variableList').empty();
+             space = new openapp.oo.Resource(openapp.param.space());
              space.getSubResources({
                                    
                                    relation: openapp.ns.role + "data",
                                    type: "my:ns:contentNote",
+                                   //callback: window.location.reload();,
+                                   onEach: function(contentNote) {
+                                   contentNote.getRepresentation("rdfjson",function(r){
+                                                               
+                                                               
+                                                               
+                                                               
+                if(changedFunction==r.parentFunction){
+                                                               
+               var newRepresentation = {"text":r.text,
+                                        "parentWidget":r.parentWidget,
+                                        "parentMicro":r.parentMicro,
+                                        "parentFunction":changedTo,
+                                        "contentType":r.contentType,
+                                        "missionType":r.missionType};
+                                         
+                                        contentNote.setRepresentation(newRepresentation);
+                                        
+                                        if(contentNote.uri!=null){
+                                        //updateRender(parentFunction);
+                                                               }
+                                                                 }
+                                                               });
+                                   }
+                                   //window.location.reload();
+                                   
+                                   });
+             
+             
+             }
+             
+             function updateRender(functionID){
+             
+             $('#contentList').empty();
+             $('#variableList').empty();
+             
+             
+             $('#variableList').append('<option value="" selected="selected" disabled>Variable/Trigger Contents</option>');
+             
+             $('#contentList').append('<img src="http://dl.dropboxusercontent.com/u/48194107/Widgetizing/loadingcontent.gif">');
+             $('#contentList').append('<p class="text-muted">Loading Contents...</p>');
+             
+             var hasChild=new Boolean(0);
+             
+             space = new openapp.oo.Resource(openapp.param.space());
+             space.getSubResources({
+                                   
+                                   relation: openapp.ns.role + "data",
+                                   type: "my:ns:contentNote",
+                                   onAll: function(data) {
+                                   if(data === null || data.length === 0){
+                                   $("#contentList > img").remove();
+                                   $("#contentList > p").remove();
+                                   $('#contentList').append('<p class="text-muted">No contents assigned</p>');
+                                   }},
                                    onEach: function(contentNote) {
                                    contentNote.getRepresentation("rdfjson",function(r){
                                   
                                   if(r.parentFunction==functionID){
-                                  
+                                hasChild=true;
                                   var content = $("<button></button>").text(r.text);
                                   content.addClass('btn btn-link btn-sm');
                                   content.attr('id', r.text);
@@ -180,8 +387,16 @@
                                                                             });
                                   content.attr('title', r.missionType);
                                   $("#contentList").append(content);
+                                  $("#contentList > img").remove();
+                                  $("#contentList > p").remove();
                                                                  }
                                                                  
+                                else if(hasChild==false){
+                                     $("#contentList > img").remove();
+                                     $("#contentList > p").remove();
+                                     $('#contentList').append('<p class="text-muted">'+functionID+' has no contents</p>');
+                                        
+                                                                 }
                                       });
                                      }
                                    });
@@ -195,7 +410,8 @@
                                                                   
                                                                   var w = document.getElementById("variableList");
                                                                   var option = document.createElement("option");
-                                                                  option.text = r.parentWidget+":"+r.parentMicro+":"+r.text;
+
+                                                                  option.text = r.parentWidget+": "+r.parentMicro+": "+r.text;
                                                                   option.value = r.text;
                                                                   option.id= r.text;
                                                                   //option.parentWidget=r.parentWidget;
@@ -203,10 +419,13 @@
                                                                   $('#'+r.text).attr('parentWidget', r.parentWidget);
                                                                   $('#'+r.text).attr('parentMicro', r.parentMicro);
                                                                   $('#'+r.text).attr('parentVariable', r.text);
+                                                                  
+                                                                  
                                                                   });
+                                   
+                                   
                                    }
                                    });
-             
              
              
              }
@@ -236,37 +455,60 @@
 				iwcClient.publish(intent);
 			}
              
-             function selectContent(contentID, contentType, parentFunction,missionType){
+             function selectContent(contentID, contentType, parentFunction, missionType){
              
              //publishMessage(selectedMicroService,parentWidget);
              
+             selectedContentID=contentID;
+             
+             $("#statusMessage").html('Update '+selectedContentID);
+             $("#statusMessage").fadeIn();
+             
+             $('#contentModeEdit').html(selectedContentID);
              
              //$('#note').val(eventID);
              //$('#Grid/Table:last').removeClass("btn btn-default").addClass("btn btn-default active");
              //$('#Form:last').removeClass("btn btn-default active").addClass("btn btn-default");
              
              if(contentType=="Collaborative"){
-             $("#Collaborative").attr('class', 'btn btn-default active');
-             $("#Local").attr('class', 'btn btn-default');
+             $("#Collaborative").attr('class', 'btn btn-default btn-sm active');
+             $("#Local").attr('class', 'btn btn-default btn-sm');
              }
              
              else if(contentType=="Local"){
-             $("#Collaborative").attr('class', 'btn btn-default');
-             $("#Local").attr('class', 'btn btn-default active');
+             $("#Collaborative").attr('class', 'btn btn-default btn-sm');
+             $("#Local").attr('class', 'btn btn-default btn-sm active');
              }
              
              
              
-             if(missionType=="Retrieved"){
-             $("#Retrieved").attr('class', 'btn btn-default active');
-             $("#Changed").attr('class', 'btn btn-default');
+             if(missionType=="GET"){
+             $("#GET").attr('class', 'btn btn-default btn-sm active');
+             $("#POST").attr('class', 'btn btn-default btn-sm');
+             $("#PUT").attr('class', 'btn btn-default btn-sm');
+             $("#DELETE").attr('class', 'btn btn-default btn-sm');
              }
              
-             else if(missionType=="Changed"){
-             $("#Changed").attr('class', 'btn btn-default active');
-             $("#Retrieved").attr('class', 'btn btn-default');
+             else if(missionType=="POST"){
+             $("#GET").attr('class', 'btn btn-default btn-sm');
+             $("#POST").attr('class', 'btn btn-default btn-sm active');
+             $("#PUT").attr('class', 'btn btn-default btn-sm');
+             $("#DELETE").attr('class', 'btn btn-default btn-sm');
              }
              
+             else if(missionType=="PUT"){
+             $("#GET").attr('class', 'btn btn-default btn-sm');
+             $("#POST").attr('class', 'btn btn-default btn-sm');
+             $("#PUT").attr('class', 'btn btn-default btn-sm active');
+             $("#DELETE").attr('class', 'btn btn-default btn-sm');
+             }
+             
+             else if(missionType=="DELETE"){
+             $("#GET").attr('class', 'btn btn-default btn-sm');
+             $("#POST").attr('class', 'btn btn-default btn-sm');
+             $("#PUT").attr('class', 'btn btn-default btn-sm');
+             $("#DELETE").attr('class', 'btn btn-default btn-sm active');
+             }
              
              
              
@@ -289,8 +531,9 @@
              }
              
 
-             $(document).ready(function(){
-                               $("#closeEdit").click(function(){
+            function closeEditMode(){
+             
+             if(editMode==true){
                                                      editMode=false;
                                                      $('#addButton').toggle(400);
                                                      $('#updateButton').toggle(400);
@@ -300,9 +543,46 @@
                                                      $('#contentModeAdd').toggle(400);
                                                      $('#contentModeEdit').toggle(400);
                                                      $('#selectedContent').toggle(400);
-                                                     });
-                               });
+                            }
+                        }
             
+             
+             function publishAddMessage(){
+             var intent = {
+             "component": "",
+             "data":"www.example.com",
+             "dataType":"text/json",
+             "action":"CONTENT_ADD",
+             "flags" :["PUBLISH_GLOBAL"],
+             "extras" :{}
+             };
+             iwcClient.publish(intent);
+             }
+             
+             function publishChangeMessage(){
+             var intent = {
+             "component": "",
+             "data":"www.example.com",
+             "dataType":"text/json",
+             "action":"CONTENT_CHANGE",
+             "flags" :["PUBLISH_GLOBAL"],
+             "extras" :{}
+             };
+             iwcClient.publish(intent);
+             }
+             
+             function publishRemoveMessage(){
+             var intent = {
+             "component": "",
+             "data":"www.example.com",
+             "dataType":"text/json",
+             "action":"CONTENT_REMOVE",
+             "flags" :["PUBLISH_GLOBAL"],
+             "extras" :{}
+             };
+             iwcClient.publish(intent);
+             }
+             
 		</script>
 		
 		<!-- HTML Block -->
@@ -311,17 +591,19 @@
              <div align="center" style="height:25px;">
              <div style="padding-top:5px;">
              <span  class="label label-primary" id="parentFunction">All</span>
+             <a style="float:right; position:absolute; right:5px; top:0px; cursor: pointer;" title="Show All" onclick="renderNotes()"><span class="glyphicon glyphicon-repeat"></span></a>
              </div>
              </div>
         
-        <div id="" style="overflow:auto; height:100px;">
-        <div id="contentList"></div>
+        <div style="overflow:auto; height:100px;">
+        <div align="center"id="contentList"></div>
         </div>
    
         <div align="center" style="background-color:#FEFFE6"class="alert alert-success">
-             <button id="closeEdit" style="display:none;" type="button" class="close btn-sm" aria-hidden="true">&times;</button>
+             <button id="closeEdit" style="display:none;" type="button" class="close btn-sm" onclick="closeEditMode()" aria-hidden="true">&times;</button>
              <h4 id="contentModeAdd" style="color:#4B4D38;" align="center">Add</h4>
              <h4 id="contentModeEdit" style="display:none; color:#4B4D38;" align="center">Update</h4>
+             <span><small id="statusMessage"></small></span>
              
             <div class="input-group">
              
@@ -335,7 +617,7 @@
              </button>
 
             <select id="variableList" class="form-control" onchange="parentWidget=this.options[this.selectedIndex].getAttribute('parentWidget'));">
-            <option disabled selected>Variable</option>
+            <option disabled selected>Variable Contents</option>
             </select>
             <span class="input-group-btn">
             <button id="addButton" type="button" class="btn btn-link" onClick="addContent()" title="Add Content">
@@ -349,21 +631,27 @@
             </div>
             
             <div class="btn-group" data-toggle="buttons">
-            <label id="Collaborative" class="btn btn-default active">
+            <label id="Collaborative" class="btn btn-default btn-sm active">
             <input type="radio" name="contentType" title="Collaborative" value="Collaborative" checked="checked">Collaborative
             </label>
-            <label id="Local" class="btn btn-default">
+            <label id="Local" class="btn btn-default btn-sm">
             <input type="radio" name="contentType" title="Local" value="Local">Local
             </label>
             </div>
         
              
              <div class="btn-group" data-toggle="buttons">
-             <label id="Changed" class="btn btn-default active">
-             <input type="radio" name="missionType" title="" value="Changed" checked="checked">Changed
+             <label id="GET" class="btn btn-default btn-sm active">
+             <input type="radio" name="missionType" title="" value="GET" checked="checked">GET
              </label>
-             <label id="Retrieved" class="btn btn-default">
-             <input type="radio" name="missionType" title="" value="Retrieved">Retrieved
+             <label id="POST" class="btn btn-default btn-sm">
+             <input type="radio" name="missionType" title="" value="POST">POST
+             </label>
+             <label id="PUT" class="btn btn-default btn-sm">
+             <input type="radio" name="missionType" title="" value="PUT">PUT
+             </label>
+             <label id="DELETE" class="btn btn-default btn-sm">
+             <input type="radio" name="missionType" title="" value="DELETE">DELETE
              </label>
              </div>
         

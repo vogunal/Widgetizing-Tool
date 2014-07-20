@@ -1,0 +1,779 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Module>
+	<ModulePrefs title="IMS LD Editor" description="A collaborative IMS LD Editor." author="Bezunesh Alemu" author_email="zueb21@gmail.com" height="680">
+		<Require feature="opensocial-0.8" />
+		<Require feature="openapp" />	
+		
+			<OAuth>
+				<Service name="openapp" xmlns:openapp="http://www.role-project.eu/xml/openapp/opensocialext/"
+					openapp:service="http://purl.org/role/terms/spaceService"
+					openapp:permitReadAppend="http://purl.org/role/terms/data">
+					<Request method="" url=""/>
+					<Authorization url=""/>
+					<Access method="" url=""/>
+				</Service>
+			</OAuth>
+	</ModulePrefs>
+	<Content type="html">
+	
+<![CDATA[  
+
+    <!-- jQuery -->
+    <link rel="stylesheet" href="http://code.jquery.com/ui/1.9.2/themes/base/jquery-ui.css" />
+    <script src="http://code.jquery.com/jquery-1.8.3.js"></script>
+    <script src="http://code.jquery.com/ui/1.9.2/jquery-ui.js"></script>    
+    
+    <!--jsTree-->
+    <script type='text/javascript' src="http://dbis.rwth-aachen.de/~jahns/SyncLD/lib/jstree-v.pre1.0/jquery.jstree.js"></script>      
+    <link rel="stylesheet" href="http://dbis.rwth-aachen.de/~jahns/SyncLD/lib/jstree-v.pre1.0/themes/default/style.css" />    
+    <link rel="stylesheet" href="http://dbis.rwth-aachen.de/~jahns/SyncLD/lib/jstree-v.pre1.0/_docs/!style.css"/>
+    
+     <!--jsPlumb -->
+		<script src="http://dbis.rwth-aachen.de/~jahns/SyncLD/lib/jsplumb/jquery.jsPlumb-1.3.16-all-min.js" type="text/javascript"></script>
+		    
+		<!--context menu-->
+     <script type="text/javascript" src="http://dbis.rwth-aachen.de/~jahns/SyncLD/lib/contextMenu/context.jquery.js"></script>
+     <link rel="stylesheet" href="http://dbis.rwth-aachen.de/~jahns/SyncLD/css/context.css" />  
+
+    <!--editable & zip -->
+    <script type="text/javascript" src="http://dbis.rwth-aachen.de/~jahns/SyncLD/lib/editable/jquery.jeditable.mini.js" ></script>
+    <script type="text/javascript" src="http://dbis.rwth-aachen.de/~jahns/SyncLD/lib/zip/jszip.js" ></script>
+		
+    <!--Editor Stylesheet-->
+    <link rel="stylesheet" href="http://dbis.rwth-aachen.de/~jahns/SyncLD/css/style.css" /> 
+    
+    <!--ROLE IWC-->
+    <script type="text/javascript" src="http://dbis.rwth-aachen.de/~jahns/fw/iwc/iwc.js"></script>
+    
+    <!--Main -->
+    <script type="text/javascript" src="http://dbis.rwth-aachen.de/~jahns/SyncLD/main/config.js"></script>
+    <script src="http://ajax.googleapis.com/ajax/libs/dojo/1.8.3/dojo/dojo.js"></script> 
+    <script type="text/javascript" src="http://dbis.rwth-aachen.de/~jahns/SyncLD/main/main.js"></script>
+
+
+<div id="bodyContainer">
+  <div id="bodyTabs">
+    <ul>
+      <li><a class='mainTab' href="#activitiesTabContainer">Activities</a></li>
+      <li><a class='mainTab' href="#actTabContainer">Properties</a></li>
+      <li><a class='mainTab' href="#environmentsTabContainer">Environments</a></li>
+      <li><a class='mainTab' href="#rolesTabContainer">Roles</a></li>
+      <li><a class='mainTab' href="#rolePartsTabContainer">Role-Parts</a></li>
+      <li><a class='mainTab' href="#resourcesTabContainer">Resources</a></li>
+      <li><button class="button" id="download" style="font-size:12px;">Export Design</button></li>
+     </ul> 
+   
+<!-------------------------------- First TAB - Activities --------------------------------------------------------------->                         
+        
+         <div id="activitiesTabContainer"> <!--Activities Tab Container -->
+          
+                <div class="drawingArea" id="toolbox">
+                  
+                    <div id="paletteTitle">Tools</div></br>
+                       
+                       <div class="icon" ><img id="LearningActivity-Icon" src="http://dbis.rwth-aachen.de/~jahns/SyncLD/css/images/learning.png" title="Learning Activity"></div><br/>
+                       <div class="icon"><img id="SupportActivity-Icon" src="http://dbis.rwth-aachen.de/~jahns/SyncLD/css/images/support.png" title="Support Activity"></div><br/>                       
+                      
+                  
+                     </div>
+                
+                <div id="canvas" class="drawingArea" >
+                 
+                 
+                    <div class="vs-context-menu">
+                        <ul>  
+                            <li class="contextProperty"><a href="#" id="contextProperty" >Properties</a></li>
+                            <li class="delete"><a href="" id="deleteActivity" >Delete</a></li>
+                        </ul>
+                    </div>
+                
+              
+                
+                </div> <!--#canvas-->
+          </div><!-- /Activities Tab Container -->
+          
+          
+<!----------------------- Second Tab - Properties (Activity Properties) ------------------------------------------------------->
+
+                
+                  
+  <div id="actTabContainer">
+               
+               
+                <!-- Add new button and menu
+                 <div>                  
+                  <div class="button">
+                      <button class="add" id="add">Add</button>
+                      <button id="select" rel="activity">Select</button>
+                  </div>
+                  <ul>
+                      <li id='newLearningActivity' class="addNewActivityMenu"><a  href="#">New Learning Activity</a></li>
+                      <li id='newSupportActivity' class="addNewActivityMenu"><a  href="#">New Support Activity</a></li>
+                  </ul>
+               </div>-->
+            
+          
+               <!--Activities Tree-->
+          
+                <div id="activitiesTree" class="activitiesTree" style="height:500px; width:250px; overflow:auto; float: left; font-size:12px;border:1px solid #ddd;">
+                  <ul>
+                       <li id="LearningActivity" type='LearningActivity'> <a href="#">Learning Activity</a></li>
+                       <li id="SupportActivity" type='SupportActivity'> <a href="#">Support Activity</a></li>
+                       
+                  </ul>
+                </div>
+                
+               
+             
+                
+                 <!-- Activity Properties-->
+                 <div id="activityProperties">
+                 
+                       
+                        <!--Learning Activity Property-->
+                        <div id="LearningActivityProperty" class="activityProperties"> 
+                              <h2 id="learningActivitPropertyTitle" style="width:94%;">Learning Activity</h2>
+                              <p>This section provides information about the Learning Activity. You can add a reference to a Resource.</p>
+                              
+                              <form>
+                              <input id="LA_visiblity" rel="visiblity" type="checkbox" style="float: left" name="visiblity"><label for="visiblity" style="float: left"/>Visible</label>
+                             <!-- <label for="parameters" style="float: left; margin-left: 30px;">Parameters:</label>
+                              <input type="text" id="LA_parameters" rel="parameters"  name="parameters"  size="60" style="float: left"  class="ui-widget-content ui-corner-all"/>--><br/>
+                              
+                              <div> <!--Description-->
+                              <h4 style="border-bottom:1px solid #ddd; width:98%; padding-top:0px;">Description</h4>                          
+                              <textarea id='LA_description' rel="description" onselectstart='return false;' style="border: 1px solid #ddd;width:98%; padding-top:0px;" ></textarea>
+                               <br/> <br/>
+                              <label for="resource"  style="float: left; ">Resource:</label>
+                               <div style="float: left; margin-left: 22px; padding-left: 8px; " >
+                                <select id= "LA_des_resources" class="resourceCombo" rel="descriptionResource" name="resource" >
+                                        <option selected></option>
+                                        
+                                </select>
+                               </div>
+                              </div><br/>
+                             
+                               
+                              <div><!--Prerequisite-->
+                              <h4 style="border-bottom:1px solid #ddd; width:98%; padding-top:0px;">Prerequisites</h4>                          
+                              <textarea id="LA_prerequisite" rel="prerequisite" onselectstart='return false;' style="width:98%; padding-top:0px;" ></textarea>
+                               <br/> <br/>
+                              <label for="resource"  style="float: left; ">Resource:</label>
+                               <div style="float: left; margin-left: 22px; padding-left: 8px; " >
+                                <select id="LA_pre_resources" class="resourceCombo" rel="prerequisiteResource" name="resource" >
+                                        <option selected></option>
+                                        
+                                </select>
+                               </div>
+                              </div><br/>
+                              
+                              <div><!--Learning Objectives-->
+                              <h4 style="border-bottom:1px solid #ddd; width:98%; padding-top:0px;">Learning Objectives</h4>                          
+                              <textarea id="LA_learningObjectives" rel="learningObjectives" onselectstart='return false;' style="width:98%; padding-top:0px;" ></textarea>
+                               <br/> <br/>
+                              <label for="resource"  style="float: left; ">Resource:</label>
+                               <div style="float: left; margin-left: 22px; padding-left: 8px; " >
+                                <select id="LA_obj_resources" class="resourceCombo" rel="objectivesResource" name="resource" >
+                                        <option selected></option>
+                                        
+                                </select>
+                               </div>
+                              </div><br/>
+                              
+                              <div><!--Environments-->
+                              <h4 style="border-bottom:1px solid #ddd; width:98%; padding-top:0px;">Environments</h4>    
+                                <div class="environmentsCkBoxs" style="border:1px solid #ddd;width:98%; height:70px; overflow:auto; padding-top:0px;">
+                                 
+                                </div>
+                              </div>
+                              
+                              <div><!--completionRule-->
+                              <h4 style="border-bottom:1px solid #ddd; width:98%; padding-top:0px;">Completion Rule</h4>            
+                                   <!--<input type="radio" rel="completionRule" id="LA_completionRule1" name="completionRule" value="none" style='float:left;'> <label for='completionRule'style='float:left;'>None</label><br/><br/>-->
+                                   <input type="radio" rel="completionRule" id="LA_completionRule2" name="completionRule" value="user-choice" style='float:left;'><label for='completionRule'style='float:left;'>User choice</label><br/><br/>
+                                   <input type="radio" rel="completionRule" id="LA_completionRule3" name="completionRule" value="time-limit" style='float:left;'><label for='completionRule'style='float:left; width:100px;'>Time limit</label> 
+                                    <!-- <label class="compRule">Years</label> 
+                                      <label class="compRule">Months</label> 
+                                      <label class="compRule">Days</label> 
+                                      <label class="compRule">Hours</label> 
+                                      <label class="compRule">Minutes</label> 
+                                      <label class="compRule">Seconds</label><br/> 
+                                      
+                                      <div style="margin-left:125px">
+                                        <span class="compRule"><input type="text" name="year" size="1" /></span>
+                                        <span class="compRule"><input type="text" name="year" size="1" /></span>
+                                        <span class="compRule"><input type="text" name="year" size="1" /></span>
+                                        <span class="compRule"><input type="text" name="year" size="1" /></span>
+                                        <span class="compRule"><input type="text" name="year" size="1" /></span>
+                                        <span class="compRule"><input type="text" name="year" size="1" /></span>
+                                      </div>
+                                    -->
+                              </div>
+                              </form>
+                              
+                        </div><!--Learning ActivityProperty-->
+                            
+                          
+          
+                        <!--SupportActivityProperty-->
+                         <div id="SupportActivityProperty" class="activityProperties">
+                              <h2 id="supportActivitPropertyTitle" style="width:94%;">Support Activity</h2>
+                              <p>This section provides information about the Support Activity. You can add a reference to a Resource.</p>
+                             
+                              <form>
+                              <input type="checkbox" id="SA_visiblity" rel="visiblity" style="float: left" name="visiblity"><label for="visiblity" style="float: left"/>Visible</label>
+                              <!--<label for="parameters" style="float: left; margin-left: 30px;">Parameters:</label>
+                              <input type="text" id="SA_parameters" rel="parameters" name='parameters'  size="60" style="float: left" class="ui-widget-content ui-corner-all"/>--><br/>
+                              
+                              <div> <!--Description-->
+                              <h4 style="border-bottom:1px solid #ddd; width:98%; padding-top:0px;">Description</h4>                          
+                              <textarea id="SA_description" rel="description" onselectstart='return false;' style="border: 1px solid #ddd; width:98%; padding-top:0px;" ></textarea>
+                               <br/> <br/>
+                              <label for="resource"  style="float: left; ">Resource:</label>
+                               <div style="float: left; margin-left: 22px; padding-left: 8px; " >
+                                <select id="SA_des_resources" rel="descriptionResource" class="resourceCombo" name="resource" >
+                                        <option selected>--Select--</option>
+                                        
+                                </select>
+                               </div>
+                              </div><br/>
+                             
+                              <div><!--Environments-->
+                              <h4 style="border-bottom:1px solid #ddd; width:98%; padding-top:0px;">Environments</h4>    
+                                <div class="sa_environmentsCkBoxs" style="border:1px solid #ddd;width:98%; height:70px; overflow:auto; padding-top:0px;">
+                                  
+                                </div>
+                              </div><br/>
+                              
+                               
+                              <div><!--Roles-->
+                              <h4 style="border-bottom:1px solid #ddd; width:98%; padding-top:0px;">Supported Roles</h4>    
+                                <div class="" style="border:1px solid #ddd;width:98%; height:70px; overflow:auto; padding-top:0px;">
+                                
+                                   <div class= "sup_rolesLearner" id="SA_RolesLearner" ><span style='font-weight:bold;padding-bottom:5px;'>Learners:</span></div><br/>
+                                   <div class="sup_rolesStaff" id="SA_RolesStaff" ><span style='font-weight:bold;padding-bottom:5px;'>Staff: </span></div><br/>
+         
+                                  
+                                </div>
+                              </div><br/>
+                              
+                              <div><!--completionRule-->
+                              <h4 style="border-bottom:1px solid #ddd; width:98%; padding-top:0px;">Completion Rule</h4>            
+                                   <!--<input type="radio" id="SA_completionRule1" rel="completionRule" name="SA_completionRule" value="none" style='float:left;'> <label for='completionRule'style='float:left;'>None</label><br/><br/>-->
+                                   <input type="radio" id="SA_completionRule2" rel="completionRule" name="SA_completionRule" value="user-choice" style='float:left;'><label for='completionRule'style='float:left;'>User choice</label><br/><br/>
+                                   <input type="radio" id="SA_completionRule3" rel="completionRule" name="SA_completionRule" value="time-limit" style='float:left;'><label for='completionRule'style='float:left; width:100px;'>Time limit:</label> 
+                                     <!--
+                                      <label class="compRule">Years</label> 
+                                      <label class="compRule">Months</label> 
+                                      <label class="compRule">Days</label> 
+                                      <label class="compRule">Hours</label> 
+                                      <label class="compRule">Minutes</label> 
+                                      <label class="compRule">Seconds</label><br/> 
+                                      
+                                      <div style="margin-left:125px">
+                                        <span class="compRule"><input type="text" name="year" size="1" /></span>
+                                        <span class="compRule"><input type="text" name="year" size="1" /></span>
+                                        <span class="compRule"><input type="text" name="year" size="1" /></span>
+                                        <span class="compRule"><input type="text" name="year" size="1" /></span>
+                                        <span class="compRule"><input type="text" name="year" size="1" /></span>
+                                        <span class="compRule"><input type="text" name="year" size="1" /></span>
+                                      </div>
+                                    -->
+                              </div>
+                              </form>                        
+                          </div> <!--SupportActivityProperty-->
+                          
+                          
+                         
+                       
+                         
+                 </div><!-- Activity Properties-->
+
+                 
+        </div>  <!--actTabContainer-->          
+                
+                          
+
+<!-----------------------------------------Third TAB - Environments--------------------------------------->
+          
+        <div id="environmentsTabContainer">
+                 
+                <!-- Add new button & menu and Delete button-->
+                <div>
+                  <div class="button">
+                      <button class="add" id="add">Add</button>
+                      <button id="select" rel="environments">Select</button>
+                      <button class="deleteNodeBtn" id="deleteEnvNode" >Delete </button>
+                  </div>
+                  <ul class='envMenu'>
+                      <li id='newEnvironment' class="addNewMenu"><a href="#">New Environment</a></li>
+                      <li id='newLearningObject' class="addNewMenu"><a href="#">New Learning Object</a></li>
+                      <li id='newSendMail' class="addNewMenu"><a href="#">New Send Mail</a></li>
+                      <li id='newConference' class="addNewMenu"><a href="#">New Conference</a></li>
+                      <li id='newEnvReference' class="addNewMenu"><a href="#">New Environment Reference</a></li>
+                  </ul>
+               </div>
+               <!--Add new button and menu-->   
+          
+          
+               <!--The Tree-->
+          
+                <div id="environmentTree" class="environmentTree" style="height:500px;width:250px; overflow:auto; float: left; font-size:12px;border:1px solid #ddd;">
+                    <ul>
+                      <li id="phtml_1" type='Environment'>
+                        <a href="#">Environments</a>
+                      </li>
+                   
+                    </ul>
+                </div>
+                
+                <!--The Tree-->
+                
+              
+                
+              <!--Properties to be filled-->             
+              <div id="properties"> 
+               
+                <!--learning object property-->
+                  <div class="properties" id="learningObjectProperty">
+                        <h2 id="learningObjectPropertyTitle" style="width:94%;">Learning Object</h2>
+                        <p>This section provides information about the Learning Object. You can add a reference to a Resource.</p>
+                        <form>
+                        <input id="LO_visiblity" rel="visiblity" type="checkbox" style="float: left" name="visiblity"><label for="visiblity" style="float: left"/>Visible</label>
+                       <!-- <label for="parameters" style="float: left; margin-left: 30px;">Parameters:</label>
+                        <input id="LO_parameters" type="text" rel="parameters" name='LO_parameters'  size="60" style="float: left" class="ui-widget-content ui-corner-all"/>--><br/>
+                        <label for="type" style="float: left; margin-left:2px; padding-top:15px;"> Type:  </label>
+                          <div style="float: left; margin-left: 55px; padding-top:15px;" >
+                          <select id="LO_type" name="LO_type" rel="learningObjectType" class="LO_type">
+                                  <option selected></option>
+                                  <option value='knowledge-object'>knowledge-object</option>
+                                  <option value='tool-object'>tool-object</object>
+                                  <option value='test-object'>test-object</object>
+                          </select>
+                          </div>
+                          
+                        <div><br/>
+                        <h4 style="border-bottom:1px solid #ddd; width:98%; padding-top:0px;">Resource</h4>
+                        <p>Reference to a Resource.</p>
+                          <fieldset style="width:94%;">
+                            <label for="resource"  style="float: left; ">Resource:</label>
+                             <div style="float: left; margin-left: 22px; padding-left: 8px; " >
+                              <select id= "LO_resourceCombo" class="LO_resourceCombo" name="resource" rel="learningObjResource">
+                                      <option selected></option>
+                                     
+                              </select>
+                             </div>
+                            
+                             <!-- <br/>
+                             <input type="checkbox" style="float: left; margin-top:15px;" name="visiblity">
+                             <label for="visiblity" style="float: left;margin-top:15px;"/>Visible</label>
+                             <label for="resourceParameters" style="float: left; margin-left: 30px; padding-top:15px;">Parameters:</label>
+                             <input type="text" name='resourceParameters'  size="59" style="float: left; margin-top:15px;" id='parameters ' class="ui-widget-content ui-corner-all"/><br/>
+                            -->
+                             
+                             </fieldset>
+                        </div>
+                        </form>
+                    </div> 
+                    <!--learning object property-->
+                    
+                  
+                    <!--send mail property-->
+                    <div class="properties" id="sendMailProperty">
+                        <h2 id="sendMailPropertyTitle"style="width:94%;">Title of node selected</h2>
+                        <p>Send Mail Service.</p>
+                        <form>
+                        <input id="Mail_visiblity" type="checkbox" rel="visiblity" style="float: left" name="visiblity"><label for="visiblity" style="float: left"/>Visible</label>
+                       <!-- <label for="parameters" style="float: left; margin-left: 39px;">Parameters:</label>
+                        <input id='Mail_parameters' type="text"  rel="parameters" name='parameters'  size="60" style="float: left"  class="ui-widget-content ui-corner-all"/>--><br/>
+                        <label for="type" style="float: left; margin-left:2px; padding-top:15px;"> Select:  </label>
+                           <div style="float: left; margin-left: 55px; padding-top:15px;" >
+                           <select id= "Mail_to" rel="mailTo" name="Mail_to" class="Mail_to">                                  
+                                  <option selected>all-persons-in-role</option>
+                                  <option>persons-in-role</object>
+                            </select>
+                            </div>
+                          </form>
+                          
+                        <div>
+                          <br/>
+                          <h4 style="border-bottom:1px solid #ddd; width:98%; padding-top:0px; ">Add Mail Recipients</h4>
+                                                 
+                          <div style="width:97%; height:200px; border: 1px solid #ddd; overflow:auto;">
+                              <div class= "recipientRolesLearner" id="recipientRolesLearner" ><span style='font-weight:bold;padding-bottom:5px;'>Learners:</span> </div><br/>
+                              <div class="recipientRolesStaff" id="recipientRolesStaff" ><span style='font-weight:bold;padding-bottom:5px;'>Staff: </span></div><br/>
+                          </div>
+                        </div>
+                        
+                    </div>
+                   <!--send mail  property--> 
+                    
+                  
+                   <!--conference service property-->   
+                   <div class="properties" id="conferenceProperty">
+                                
+                        <h2 id="conferencePropertyTitle" style="width:94%;">Title of node selected</h2>
+                        <p>Conference Service.</p>
+                        <form>
+                        <input id="Conf_visiblity" type="checkbox" style="float: left" rel="visiblity" name="visiblity"><label for="visiblity" style="float: left"/>Visible</label>
+                       <!-- <label for="parameters" style="float: left; margin-left: 39px;">Parameters:</label>
+                        <input id="Conf_parameters" rel="parameters" type="text" name='parameters'  size="60" style="float: left" class="ui-widget-content ui-corner-all"/>--><br/>
+                        <label for="type" style="float: left; margin-left:2px; padding-top:15px;"> Type:  </label>
+                           <div style="float: left; margin-left: 55px; padding-top:15px;" >
+                           <select id="Conf_type" name="Conf_type" rel="conferenceType" class="Conf_type">
+                                
+                                  <option value="asynchronous">asynchronous</option>
+                                  <option value="synchronous">synchronous</option>                                  
+                                  <option value="announcement">announcement</option>
+                            </select>
+                            </div>
+                          
+                        <div><br/>
+                        <h4 style="border-bottom:1px solid #ddd; width:98%; padding-top:0px;">Resource</h4>
+                        <p>Reference to a Resource.</p>
+                          <fieldset style="width:94%;">
+                            <label for="resource"  style="float: left; ">Resource:</label>
+                             <div style="float: left; margin-left: 22px; padding-left: 8px; " >
+                              <select id="Conf_resourceCombo" rel="conferenceResources" class="Conf_resourceCombo" name="Conf_resourceCombo" >
+                                      <option selected> </option>
+                                    
+                              </select>
+                              </div>
+                             <!--<br/>
+                             <input type="checkbox" style="float: left; margin-top:15px;" name="visiblity">
+                             <label for="visiblity" style="float: left;margin-top:15px;"/>Visible</label>
+                             <label for="resourceParameters" style="float: left; margin-left: 30px; padding-top:15px;">Parameters:</label>
+                             <input type="text" name='resourceParameters'  size="59" style="float: left; margin-top:15px;" id='parameters ' class="ui-widget-content ui-corner-all"/><br/>
+                            -->
+                             </fieldset>
+                        </div>
+                        </form>
+                          
+                        
+                        <div>
+                         
+                          <h4 style="border-bottom:1px solid #ddd; width:98%; padding-top:0px;">Add Conference Roles</h4>
+                                                
+                          <div style="width:97%; height:160px; border: 1px solid #ddd; overflow:auto;">
+                              <div style='height:20px;background-color:#ddd;'>
+                                  <span style='float:left; width:120px;'>Roles</span>
+                                  <span style='float:left; margin-left:45px;'>Participant</span>
+                                  <span style='float:left; margin-left:45px;'>Observer</span>
+                                  <span style='float:left; margin-left:45px;'>Manager</span>
+                                  <span style='float:left; margin-left:45px;'>Moderator</span></div>
+                              <div class="participantRolesLearner" id="participantRolesLearner" ><span style='font-weight:bold;padding-bottom:5px;'>Learners:</span></div><br/>
+                              <div class="participantRolesStaff" id="participantRolesStaff" ><span style='font-weight:bold;padding-bottom:5px;'>Staffs: </span></div><br/>
+                          </div>
+                        </div>
+                        
+                        
+                   </div>
+                   <!--conference service property-->  
+                   
+               </div> 
+               <!--Properties to be filled-->
+             
+              
+               
+               
+               <!--Add new environmnet, learning object and service dialog -->
+               <div id="dialog-environment" >
+                <p class="validateTips">Min length 3 </p>
+                  <form>
+                 
+                      <label for="name">Title</label>
+                      <input type="text" name="name" id="name" class="text ui-widget-content ui-corner-all" />                        
+                  
+                  </form>
+               </div>
+               <!--Add new environmnet, learning object and service dialog -->
+               
+                
+              <!--Add new environmnet-reference dialog -->
+              <div id="dialog-envReference" >
+               
+                  <form>
+                      <label for="ref">Environment:</label>
+                      <select id="dialog-envReference-envList" style="width:150px;">
+                         <option value="select">select</option>
+                      </select> 
+                  </form>
+              </div>
+              <!--Add new environmnet reference dialog  -->
+              
+          
+              
+              </div><!--#environmentsTabContainer' -->          
+          
+          
+          
+ <!----------------------------------------Fourth TAB - ROLES--------------------------------------->             
+           
+        <div id="rolesTabContainer">
+            
+                  
+                 <!-- Add new and Delete button and also menu-->
+                <div>
+                  <div class="button">
+                      <button class="add" id="add">Add</button>
+                      <button id="select" rel="roles">Select</button>
+                      <button class="deleteNodeBtn" id="deleteRoleNode" >Delete </button>
+                  </div>
+                  <ul >
+                      <li id='newLearner' class="addRoleMenu"><a  href="#">New Learner Role</a></li>
+                      <li id='newStaff' class="addRoleMenu"><a  href="#">New Staff Role</a></li>
+                  </ul>
+               </div>
+               <!--Add new button and menu-->   
+          
+          
+              
+               <!--Roles Tree-->
+          
+                <div id="rolesTree" class="rolesTree" style="height:500px; width:250px; float:left; overflow:auto; font-size:12px;border:1px solid #ddd;">
+                  <ul>
+                       <li id="learner" type='Learner'> <a href="#">Learners</a></li>
+                       <li id="staff" type='Staff'> <a href="#">Staff</a></li>
+                  
+                  </ul>
+                </div>
+                
+               
+                
+               <div id="roleProperties"> <!--RoleProperties-->
+                 <!--Learner and Staff Property-->
+                  <div class="roleProperties" id="learnerProperty">
+                        <h2 id="roleTitle" style="width:94%;"></h2>
+                        <p>This section provides information about a role in the Learning Design.</p>
+                        <form>
+                          <label for="href" style="float: left; width:120px; padding-top:15px;"/>HREF:</label>
+                             <input type="text" style="float: left; width:220px; margin-top:15px;" name="href" id="href" rel="href" class="ui-widget-content ui-corner-all"><br/>
+                          <label for="minPersons" style="float: left; width:120px; padding-top:15px;">Min Persons:</label> 
+                             <input type="text" name='minPersons'  size="10" style="float: left;  margin-top:15px;" id='minPersons' rel="minPersons" class="ui-widget-content ui-corner-all"/><br/>
+                          <label for="maxPersons" style="float: left; width:120px; padding-top:15px;"/>Max Persons:</label>
+                             <input type="text" name='maxPersons'  size="10" style="float: left;  margin-top:15px;" id='maxPersons' rel="maxPersons" class="ui-widget-content ui-corner-all"/><br/>
+                         <!-- <label for="type" style="float: left; width:120px; padding-top:15px;"> Create New:  </label>
+                              <div style="float: left; padding-top:15px;" >
+                              <select class="">
+                                      <option selected></option>
+                                      <option>not-allowed</option>
+                                      <option>allowed</object>                                     
+                              </select>
+                              </div><br/>
+                         
+                           <label for="type" style="float: left; width:120px;padding-top:15px;"> Match Persons:  </label>
+                              <div style="float: left; padding-top:15px;" >
+                              <select class="">
+                                      <option selected></option>
+                                      <option>exclusively-in-roles-allowed</option>
+                                      <option>not-exclusively</object>                                     
+                              </select>
+                              </div><br/>
+                         -->
+                         
+                         
+                        <div><br/>
+                        <!-- <h4 style="border-bottom:1px solid #ddd; width:98%; padding-top:0px;">Resource</h4>
+                        <p>Reference to a Resource.</p>
+                          <fieldset style="width:94%;">
+                            <label for="resource"  style="float: left; ">Resource:</label>
+                             <div style="float: left; margin-left: 22px; padding-left: 8px; " >
+                              <select name="rolesResourceCombo" class="rolesResourceCombo" id="rolesResource" rel="roleResource">
+                                      <option selected>--select--</option>
+                                      
+                              </select>
+                             </div><br/>
+                          <input type="checkbox" style="float: left; margin-top:15px;" name="visiblity">
+                             <label for="visiblity" style="float: left;margin-top:15px;"/>Visible</label>
+                             <label for="resourceParameters" style="float: left; margin-left: 30px; padding-top:15px;">Parameters:</label>
+                             <input type="text" name='resourceParameters'  size="59" style="float: left; margin-top:15px;" id='parameters ' class="ui-widget-content ui-corner-all"/><br/>
+                           -->
+                             </fieldset>
+                        </div>
+                        </form>
+                    </div> 
+                    <!--Learner and Staff property-->
+                
+                 </div><!--Role Properties-->
+                
+                
+                
+                <!--Add new Learner or Staff dialog-->
+                 <div id="dialog-role" >
+                  <p class="validateTips">Min length 3</p>
+                    <form>
+                   
+                        <label for="name">Title</label>
+                        <input type="text" name="roleName" id="roleName" class="text ui-widget-content ui-corner-all" />                        
+                    
+                    </form>
+                 </div>
+            
+                 
+                 
+                 
+                  <!--Delete  Learner or Staff dialog-->
+                 <div id="deleteDialog" >
+                    <form>
+                        <label for="name">Are you sure you want to delete?</label>
+                    </form>
+                 </div>
+                 
+            
+            </div> <!--/rolesTabContainer-->
+              
+<!---------------------------------------- Fifth PARTS TAB --------------------------------------->                
+   
+    <div id="rolePartsTabContainer">
+              
+              <!-- Add new and Delete button and also menu-->
+                <div>
+                  <div class="button">
+                      <button class="add" id="add">Add</button>
+                      <button id="select" rel="roleParts">Select</button>
+                      <button class="deleteNodeBtn" id="deleteRolePartNode" >Delete </button>
+                  </div>
+                  <ul>
+                      <li id='newRoleParts' class="addRolePartMenu"><a  href="#">New Role Part</a></li>
+                  </ul>
+               </div>
+               <!--Add new button and menu-->   
+          
+          
+              
+               <!--Role Part Tree-->
+          
+                <div id="rolePartTree" class="rolePartTree" style="height:500px; width:250px; float:left; overflow:auto; font-size:12px;border:1px solid #ddd;">
+                  <ul>
+                       <li id="roleParts" type='RoleParts' > <a href="#">Role Parts</a></li>
+                      
+                  </ul>
+                </div>
+    
+                
+                
+                 <!--Add new roleParts dialog-->
+                 <div id="dialog-rolePart" >
+                  <p class="validateTips">Min length 3</p>
+                    <form>
+                   
+                        <label for="name">Title</label>
+                        <input type="text" name="rolePartName" id="rolePartName" class="text ui-widget-content ui-corner-all" />                        
+                    
+                    </form>
+                </div>
+                
+                <!-- Role Parts Properties-->
+                <div id="rolePartsProperties">
+                    
+                  <div id="rolePartProperties" class="rolePartsProperties">
+                       <h2 id="learningActivitPropertyTitle" style="width:94%;">Role-Parts</h2>
+                          
+                       
+                            <div><!--Roles-->
+                              <h4 style="border-bottom:1px solid #ddd; width:98%; padding-top:0px;">Select Role</h4>    
+                                <div class="" style="border:1px solid #ddd;width:98%; height:150px; overflow:auto; padding-top:0px;">
+                                
+                                   <div class= "rp_rolesLearner" id="RP_RolesLearner" ><span style='font-weight:bold;padding-bottom:5px;'>Learners:</span></div><br/>
+                                   <div class="rp_rolesStaff" id="RP_RolesStaff" ><span style='font-weight:bold;padding-bottom:5px;'>Staff: </span></div>
+         
+                                  
+                                </div>
+                              </div><br/> 
+                              
+                              <div><!--Activities-->
+                              <h4 style="border-bottom:1px solid #ddd; width:98%; padding-top:0px;">Select Activity</h4>    
+                                <div class="" style="border:1px solid #ddd;width:98%; height:170px; overflow:auto; padding-top:0px;">
+                                
+                                   <div class= "rp_learningActivites" id="RP_learningActivites" ><span style='font-weight:bold;padding-bottom:5px;'>Learning Activities:</span> </div><br/>
+                                   <div class="rp_supportActivities" id="RP_supportActivities" ><span style='font-weight:bold;padding-bottom:5px;'>Support Activities: </span></div>
+         
+                                  
+                                </div>
+                              </div><br/> 
+                       
+                       
+                    </div>
+                
+                </div><!-- Role Parts Properties-->
+                 
+                 
+    </div><!--/ rolePartsTabContainer-->
+
+    
+    
+    
+<!----------------------------------------- Sixth RESOURCES TAB --------------------------------------->                
+           
+         <div id="resourcesTabContainer">
+                 
+                <!-- Add new button & menu, and Delete button-->
+                   <div>                  
+                    <div class="button">
+                        <button class="add" id="add">Add</button>
+                        <button id="select" rel="resources">Select</button>
+                        <button class="deleteNodeBtn" id="deleteResourceNode" >Delete </button>
+                    </div>
+                    <ul>
+                        <li id='newResources' class="addNewResourcesMenu"><a  href="#">New Resource</a></li>
+                        <li id='newOnlineMaterial' class="addNewResourcesMenu"><a  href="#">Add Online Material</a></li>
+                        <li id='newImportFile' class="addNewResourcesMenu"><a  href="#">Add Local File</a></li>
+                    </ul>
+                    </div>
+              
+               
+                <!--Resources Tree-->
+          
+                <div id="resourcesTree" class="resourcesTree" style="height:500px; width:250px; float:left; overflow:auto; font-size:12px;border:1px solid #ddd;">
+                  <ul>
+                       <li id="resource" type='Resources'> <a href="#">Resources</a></li>
+                  </ul>
+                </div>
+                 
+                
+                 <!--Add dialog-resources dialog-->
+                 <div id="dialog-resources" >
+                   <p class="validateTips">Min length 3</p>
+                    <form>
+                        <label for="resourceName">Title:</label>
+                        <input type="text" name="resourceName" id="resourceName" class="text ui-widget-content ui-corner-all" /> 
+                        <label for="url" class="resourceURL">URL:</label>
+                        <input type="text" name="resourceURL" id="resourceURL" class="text ui-widget-content ui-corner-all resourceURL" />
+                        <label for="url" class="resourceFile">File:</label>
+                        <input type="file" name="resourceFile" id="resourceFile" class="resourceFile" />
+                    </form>
+                 </div>
+                 
+                 
+                 
+                 
+                 <!-- Resources Properties-->
+                <div id="resourcesProperties">
+                    
+                  <div class="resourcesProperties">
+                       
+                        <label for="" style="float: left; width:100px; font-weight:bold; padding-top:15px;"/>Title:</label>
+                         <div style="float: left; width:220px; margin-top:15px;" name="" id="resourceElementName" rel="" ></div><br/>
+                      <label for="" style="float: left; width:100px; font-weight:bold; padding-top:15px;">Location:</label> 
+                         <div style="float: left; width:220px; margin-top:15px;" name="" id="resourceElementLoc" rel="" ></div><br/>
+                     <!-- <label for="" style="float: left; width:120px; padding-top:15px;"/>File:</label>
+                         <div style="float: left; width:220px; margin-top:15px;" name="" id="resourceElementFile" rel="" ></div><br/>-->
+                  </div>
+                
+                </div> <!--Resources Properties  -->
+                 
+                    
+             
+             </div><!--/ resourcesTabContainer-->
+
+          
+    
+  </div><!--#bodyTabs-->
+</div><!--/#bodyContainer-->
+
+
+  
+
+]]>
+	</Content>
+</Module>
